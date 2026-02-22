@@ -48,8 +48,10 @@ private struct InfoItemRow: View {
                         .font(.system(size: 13))
                         .foregroundColor(Theme.textSec)
                         .lineSpacing(4)
-                        .fixedSize(horizontal: false, vertical: true)
+                        .lineLimit(nil)
+                        .multilineTextAlignment(.leading)
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
         .opacity(item.isDone ? 0.45 : 1.0)

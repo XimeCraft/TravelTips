@@ -52,6 +52,7 @@ struct CardView<Content: View>: View {
 
     private var inner: some View {
         content
+            .frame(maxWidth: .infinity, alignment: .leading)
             .padding(16)
             .background(Theme.card)
             .cornerRadius(16)
@@ -151,7 +152,7 @@ enum TripTab: String, CaseIterable {
         case .overview:      return "list.bullet.rectangle"
         case .transport:     return "airplane"
         case .accommodation: return "bed.double.fill"
-        case .destinations:  return "mappin.and.ellipsis"
+        case .destinations:  return "mappin"
         case .info:          return "info.circle.fill"
         }
     }
