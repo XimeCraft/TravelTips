@@ -1,18 +1,26 @@
 import SwiftUI
+import SwiftData
 
 struct TransportTab: View {
     let trip: Trip
 
-    private var transportDays: [(Int, TripDay)] {
-        trip.sortedDays
-            .enumerated()
-            .filter { $0.element.transport != nil }
-            .map { ($0.offset + 1, $0.element) }
+    @Environment(\.modelContext) private var modelContext
+    @State private var showAddSheet = false
+
+    private var transportDays: [(Int, TripDay, TransportInfo)] {
+        var result: [(Int, TripDay, TransportInfo)] = []
+        let days = trip.sortedDays
+        for (i, day) in days.enumerated() {
+            for transport in day.transports {
+                result.append((i + 1, day, transport))
+            }
+        }
+        return result
     }
 
     var body: some View {
-        ScrollView {
-            LazyVStack(spacing: 0) {
+        ZStack(alignment: .topTrailing) {
+            List {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Transport")
                         .font(.system(size: 24, weight: .heavy))
@@ -25,16 +33,45 @@ struct TransportTab: View {
                 .padding(.horizontal, 20)
                 .padding(.top, 10)
                 .padding(.bottom, 6)
+                .listRowInsets(EdgeInsets())
+                .listRowBackground(Theme.bg)
+                .listRowSeparator(.hidden)
 
-                ForEach(transportDays, id: \.1.id) { dayNum, day in
-                    if let t = day.transport {
-                        TransportCard(day: day, transport: t, dayNumber: dayNum)
-                    }
+                ForEach(transportDays, id: \.2.id) { dayNum, day, transport in
+                    TransportCard(day: day, transport: transport, dayNumber: dayNum)
+                        .swipeActions(edge: .trailing) {
+                            Button(role: .destructive) {
+                                deleteTransport(transport, from: day)
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
+                        }
+                        .listRowInsets(EdgeInsets())
+                        .listRowBackground(Theme.bg)
+                        .listRowSeparator(.hidden)
                 }
-
-                Spacer(minLength: 20)
             }
+            .listStyle(.plain)
+            .scrollContentBackground(.hidden)
+
+            AddButton { showAddSheet = true }
+                .padding(.top, 14)
+                .padding(.trailing, 20)
         }
+        .sheet(isPresented: $showAddSheet) {
+            AddTransportSheet(trip: trip)
+                .presentationDetents([.medium])
+        }
+    }
+
+    private func deleteTransport(_ transport: TransportInfo, from day: TripDay) {
+        for d in trip.days {
+            d.timelineItems.removeAll { $0.linkedId == transport.id }
+        }
+        if let idx = day.transports.firstIndex(where: { $0.id == transport.id }) {
+            day.transports.remove(at: idx)
+        }
+        modelContext.delete(transport)
     }
 }
 
@@ -43,27 +80,22 @@ private struct TransportCard: View {
     let transport: TransportInfo
     let dayNumber: Int
 
-    private var isFlight: Bool { transport.type == .flight }
-
     var body: some View {
         CardView {
             VStack(spacing: 12) {
-                // Date + Type pill
                 HStack {
                     Text("Day \(dayNumber) · \(fmtDate(day.date))")
                         .font(.system(size: 13, weight: .semibold))
                         .foregroundColor(Theme.textSec)
                     Spacer()
                     PillView(
-                        text: "\(transport.type.icon) \(transport.type.displayName.uppercased())",
-                        bg: isFlight ? Color(hex: "E3F2ED") : Color(hex: "FFF8E1"),
-                        fg: isFlight ? Theme.primary : Color(hex: "F9A825")
+                        text: "\(transport.type.emoji) \(transport.type.displayName.uppercased())",
+                        bg: Theme.transport.opacity(0.15),
+                        fg: Theme.transport
                     )
                 }
 
-                // From → To
                 HStack(spacing: 8) {
-                    // Departure
                     VStack(spacing: 3) {
                         Text(transport.departureTime.isEmpty ? "—" : transport.departureTime)
                             .font(.system(size: 24, weight: .heavy))
@@ -75,18 +107,17 @@ private struct TransportCard: View {
                     }
                     .frame(maxWidth: .infinity)
 
-                    // Line + icon
                     VStack(spacing: 6) {
                         ZStack {
                             Rectangle()
                                 .frame(height: 2)
                                 .foregroundStyle(
                                     LinearGradient(
-                                        colors: [Theme.primary.opacity(0.25), Theme.primary],
+                                        colors: [Theme.transport.opacity(0.25), Theme.transport],
                                         startPoint: .leading, endPoint: .trailing
                                     )
                                 )
-                            Text(transport.type.icon)
+                            Text(transport.type.emoji)
                                 .font(.system(size: 16))
                                 .background(Theme.card)
                                 .padding(.horizontal, 4)
@@ -99,7 +130,6 @@ private struct TransportCard: View {
                     }
                     .frame(maxWidth: .infinity)
 
-                    // Arrival
                     VStack(spacing: 3) {
                         Text(transport.arrivalTime.isEmpty ? "—" : transport.arrivalTime)
                             .font(.system(size: 24, weight: .heavy))
@@ -110,6 +140,121 @@ private struct TransportCard: View {
                             .multilineTextAlignment(.center)
                     }
                     .frame(maxWidth: .infinity)
+                }
+
+                ViewDetailsButton(color: Theme.transport)
+            }
+        }
+    }
+}
+
+// MARK: - Add Transport Sheet
+
+private struct AddTransportSheet: View {
+    let trip: Trip
+
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
+
+    @State private var selectedDayIndex = 0
+    @State private var type: TransportType = .flight
+    @State private var from = ""
+    @State private var to = ""
+    @State private var depTime = ""
+    @State private var arrTime = ""
+    @State private var detail = ""
+
+    private var days: [TripDay] { trip.sortedDays }
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 0) {
+                    HStack(spacing: 10) {
+                        VStack(alignment: .leading, spacing: 5) {
+                            Text("Day")
+                                .font(.system(size: 11, weight: .bold))
+                                .foregroundColor(Theme.textSec)
+                                .textCase(.uppercase)
+                                .kerning(0.8)
+                            if !days.isEmpty {
+                                Picker("Day", selection: $selectedDayIndex) {
+                                    ForEach(Array(days.enumerated()), id: \.offset) { i, day in
+                                        Text("Day \(i + 1), \(fmtDateShort(day.date))").tag(i)
+                                    }
+                                }
+                                .pickerStyle(.menu)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 6)
+                                .background(Color(.systemGray6))
+                                .cornerRadius(10)
+                                .tint(Theme.primary)
+                            }
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+
+                        VStack(alignment: .leading, spacing: 5) {
+                            Text("Type")
+                                .font(.system(size: 11, weight: .bold))
+                                .foregroundColor(Theme.textSec)
+                                .textCase(.uppercase)
+                                .kerning(0.8)
+                            Picker("Type", selection: $type) {
+                                ForEach([TransportType.flight, .drive, .train, .bus, .ferry], id: \.self) { t in
+                                    Text("\(t.emoji) \(t.displayName)").tag(t)
+                                }
+                            }
+                            .pickerStyle(.menu)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(Color(.systemGray6))
+                            .cornerRadius(10)
+                            .tint(Theme.primary)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .padding(.bottom, 4)
+
+                    HStack(spacing: 10) {
+                        SheetField(label: "From", text: $from, placeholder: "Departure")
+                        SheetField(label: "To", text: $to, placeholder: "Arrival")
+                    }
+                    HStack(spacing: 10) {
+                        SheetField(label: "Dep. Time", text: $depTime, placeholder: "08:00")
+                        SheetField(label: "Arr. Time", text: $arrTime, placeholder: "10:30")
+                    }
+                    SheetField(label: "Detail", text: $detail, placeholder: "Flight number, etc.")
+
+                    SheetSaveButton(label: "Save") {
+                        guard !from.isEmpty, !to.isEmpty, !days.isEmpty else { return }
+                        let transport = TransportInfo(
+                            type: type, detail: detail, from: from, to: to,
+                            departureTime: depTime, arrivalTime: arrTime
+                        )
+                        modelContext.insert(transport)
+                        days[selectedDayIndex].transports.append(transport)
+
+                        let tlItem = TimelineItem(
+                            time: depTime.isEmpty ? "--:--" : depTime,
+                            title: "\(from) → \(to)",
+                            type: type.timelineType,
+                            linkedId: transport.id,
+                            sortOrder: days[selectedDayIndex].timelineItems.count
+                        )
+                        modelContext.insert(tlItem)
+                        days[selectedDayIndex].timelineItems.append(tlItem)
+
+                        dismiss()
+                    }
+                }
+                .padding(20)
+            }
+            .navigationTitle("Add Transport")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                        .foregroundColor(Theme.primary)
                 }
             }
         }

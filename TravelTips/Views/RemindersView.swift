@@ -1,66 +1,148 @@
 import SwiftUI
+import SwiftData
 
 struct RemindersView: View {
     let trips: [Trip]
 
+    @Environment(\.modelContext) private var modelContext
+    @Query(sort: \TaskItem.createdAt) private var tasks: [TaskItem]
+
+    @State private var showInlineAdd = false
+    @State private var newTaskText = ""
+
     var body: some View {
-        ScrollView {
-            LazyVStack(spacing: 0) {
+        ZStack(alignment: .topTrailing) {
+            List {
+                // Header
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Reminders")
+                    Text("Todo")
                         .font(.system(size: 30, weight: .heavy))
                         .foregroundColor(Theme.textPrimary)
-                    Text("Upcoming tasks across all trips")
+                    Text("Stay on top of your trip")
                         .font(.system(size: 14))
                         .foregroundColor(Theme.textSec)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 20)
                 .padding(.top, 12)
+                .padding(.bottom, 6)
+                .listRowInsets(EdgeInsets())
+                .listRowBackground(Theme.bg)
+                .listRowSeparator(.hidden)
 
-                SectionHeader(title: "Next 7 Days")
+                // MARK: Trip Reminders (auto, read-only)
 
-                // Dynamic reminder cards based on Egypt trip
-                ForEach(reminders) { reminder in
-                    ReminderCard(reminder: reminder)
+                SectionHeader(title: "Trip Reminders")
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Theme.bg)
+                    .listRowSeparator(.hidden)
+
+                ForEach(tripReminders) { reminder in
+                    TripReminderCard(reminder: reminder)
+                        .listRowInsets(EdgeInsets())
+                        .listRowBackground(Theme.bg)
+                        .listRowSeparator(.hidden)
                 }
 
-                Spacer(minLength: 20)
+                // MARK: My Tasks (manual)
+
+                SectionHeader(title: "My Tasks")
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Theme.bg)
+                    .listRowSeparator(.hidden)
+
+                if showInlineAdd {
+                    HStack(spacing: 10) {
+                        TextField("New task...", text: $newTaskText)
+                            .font(.system(size: 14))
+                            .padding(10)
+                            .background(Color(.systemGray6))
+                            .cornerRadius(10)
+                            .onSubmit { addTask() }
+                        Button("Cancel") {
+                            showInlineAdd = false
+                            newTaskText = ""
+                        }
+                        .font(.system(size: 13))
+                        .foregroundColor(Theme.textSec)
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 6)
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Theme.bg)
+                    .listRowSeparator(.hidden)
+                }
+
+                if tasks.isEmpty && !showInlineAdd {
+                    Text("No tasks yet — tap + to add one")
+                        .font(.system(size: 13))
+                        .foregroundColor(Theme.textTer)
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 12)
+                        .listRowInsets(EdgeInsets())
+                        .listRowBackground(Theme.bg)
+                        .listRowSeparator(.hidden)
+                }
+
+                ForEach(tasks) { task in
+                    TaskCard(task: task)
+                        .swipeActions(edge: .trailing) {
+                            Button(role: .destructive) {
+                                modelContext.delete(task)
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
+                        }
+                        .listRowInsets(EdgeInsets())
+                        .listRowBackground(Theme.bg)
+                        .listRowSeparator(.hidden)
+                }
             }
+            .listStyle(.plain)
+            .scrollContentBackground(.hidden)
+
+            AddButton {
+                showInlineAdd = true
+            }
+            .padding(.top, 14)
+            .padding(.trailing, 20)
         }
     }
 
-    private var reminders: [ReminderItem] {
-        var items: [ReminderItem] = []
-        for trip in trips {
+    private var tripReminders: [TripReminderItem] {
+        trips.map { trip in
             let d = trip.daysLeft
-            items.append(ReminderItem(
+            return TripReminderItem(
                 icon: trip.emoji,
-                title: "\(trip.name) trip \(d > 0 ? "starts in \(d) days" : "is now!")",
-                subtitle: "Don't forget: visa photo, travel insurance"
-            ))
+                title: "\(trip.name) \(d > 0 ? "starts in \(d) days" : "is now!")",
+                subtitle: "\(fmtDate(trip.startDate)) – \(fmtDate(trip.endDate))"
+            )
         }
-        items.append(contentsOf: [
-            ReminderItem(icon: "💰", title: "Prepare USD cash for visa",
-                         subtitle: "$25 exact change recommended"),
-            ReminderItem(icon: "📱", title: "Download offline maps",
-                         subtitle: "Cairo, Luxor, Marsa Alam areas"),
-        ])
-        return items
+    }
+
+    private func addTask() {
+        let text = newTaskText.trimmingCharacters(in: .whitespaces)
+        guard !text.isEmpty else { showInlineAdd = false; return }
+        let task = TaskItem(title: text)
+        modelContext.insert(task)
+        newTaskText = ""
+        showInlineAdd = false
     }
 }
 
 // MARK: - Data
 
-struct ReminderItem: Identifiable {
+struct TripReminderItem: Identifiable {
     let id = UUID()
     let icon: String
     let title: String
     let subtitle: String
 }
 
-private struct ReminderCard: View {
-    let reminder: ReminderItem
+// MARK: - Trip Reminder Card (read-only)
+
+private struct TripReminderCard: View {
+    let reminder: TripReminderItem
 
     var body: some View {
         CardView {
@@ -76,6 +158,53 @@ private struct ReminderCard: View {
                         .foregroundColor(Theme.textSec)
                 }
             }
+        }
+    }
+}
+
+// MARK: - Task Card (tap-to-edit, checkbox, swipe-to-delete)
+
+private struct TaskCard: View {
+    let task: TaskItem
+
+    @State private var isEditing = false
+    @FocusState private var isFocused: Bool
+
+    var body: some View {
+        CardView {
+            HStack(spacing: 12) {
+                CheckboxView(isChecked: task.isDone, color: Theme.primary) {
+                    task.isDone.toggle()
+                    if task.isDone { isEditing = false }
+                }
+
+                if isEditing {
+                    TextField("Task", text: Binding(
+                        get: { task.title },
+                        set: { task.title = $0 }
+                    ))
+                    .font(.system(size: 14, weight: .semibold))
+                    .focused($isFocused)
+                    .onSubmit { isEditing = false }
+                } else {
+                    Text(task.title)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(Theme.textPrimary)
+                        .strikethrough(task.isDone)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            guard !task.isDone else { return }
+                            isEditing = true
+                            isFocused = true
+                        }
+                }
+            }
+        }
+        .opacity(task.isDone ? 0.45 : 1.0)
+        .animation(.easeInOut(duration: 0.25), value: task.isDone)
+        .onChange(of: isFocused) { newValue in
+            if !newValue { isEditing = false }
         }
     }
 }

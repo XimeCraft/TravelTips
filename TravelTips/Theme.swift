@@ -15,6 +15,40 @@ enum Theme {
     static let textSec      = Color(hex: "888888")
     static let textTer      = Color(hex: "AAAAAA")
     static let border       = Color.black.opacity(0.06)
+
+    // Type system colors (MVP2)
+    static let transport    = Color(hex: "2196F3")
+    static let hotel        = Color(hex: "9C27B0")
+    static let attraction   = Color(hex: "F9A825")
+    static let activity     = Color(hex: "00BCD4")
+    static let typeOther    = Color(hex: "9E9E9E")
+}
+
+// MARK: - TimelineType color extension
+
+extension TimelineType {
+    var color: Color {
+        switch self {
+        case .flight, .drive, .train, .bus, .ferry: return Theme.transport
+        case .hotel:      return Theme.hotel
+        case .attraction: return Theme.attraction
+        case .restaurant: return Theme.primary
+        case .activity:   return Theme.activity
+        case .other:      return Theme.typeOther
+        }
+    }
+}
+
+extension DestinationType {
+    var color: Color {
+        switch self {
+        case .attraction: return Theme.attraction
+        case .activity:   return Theme.activity
+        case .restaurant: return Theme.primary
+        case .shopping:   return Theme.transport
+        case .other:      return Theme.typeOther
+        }
+    }
 }
 
 // MARK: - Color(hex:) extension
@@ -44,6 +78,12 @@ extension Color {
 func fmtDate(_ date: Date) -> String {
     let f = DateFormatter()
     f.dateFormat = "EEE, MMM d"
+    return f.string(from: date)
+}
+
+func fmtDateShort(_ date: Date) -> String {
+    let f = DateFormatter()
+    f.dateFormat = "MMM d"
     return f.string(from: date)
 }
 
