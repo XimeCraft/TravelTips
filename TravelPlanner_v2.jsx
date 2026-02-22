@@ -234,7 +234,7 @@ const tripTabs = [
   { id: "overview", icon: "📋", label: "Overview" },
   { id: "transport", icon: "✈️", label: "Transport" },
   { id: "accommodation", icon: "🏨", label: "Hotels" },
-  { id: "destinations", icon: "📍", label: "Places" },
+  { id: "destinations", icon: "🎯", label: "Places" },
   { id: "info", icon: "ℹ️", label: "Info" },
 ];
 
@@ -469,7 +469,7 @@ const InfoTab = ({ trip }) => {
       {Object.entries(items).map(([k, item]) => (
         <Card key={k} style={{ display: "flex", gap: 12, alignItems: "flex-start", opacity: item.done ? 0.45 : 1, transition: "opacity 0.3s" }}>
           <Check checked={item.done} onChange={() => toggle(k)} />
-          <div style={{ flex: 1 }}>
+          <div>
             <div style={{ fontSize: 15, fontWeight: 700, color: THEME.text, textDecoration: item.done ? "line-through" : "none" }}>{item.title}</div>
             <div style={{ fontSize: 13, color: THEME.textSec, marginTop: 5, lineHeight: 1.6 }}>{item.details}</div>
           </div>
