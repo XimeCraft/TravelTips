@@ -1,11 +1,5 @@
-//
-//  TravelTipsApp.swift
-//  TravelTips
-//
-//  Created by 孟晓 on 2026/2/22.
-//
-
 import SwiftUI
+import SwiftData
 
 @main
 struct TravelTipsApp: App {
@@ -13,5 +7,14 @@ struct TravelTipsApp: App {
         WindowGroup {
             ContentView()
         }
+        .modelContainer(for: [
+            Trip.self,
+            TripDay.self,
+            TransportInfo.self,
+            Accommodation.self,
+            Destination.self,
+            DayDetail.self,
+            InfoItem.self,
+        ])
     }
 }
