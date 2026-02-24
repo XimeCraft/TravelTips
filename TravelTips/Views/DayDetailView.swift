@@ -173,6 +173,15 @@ private struct TimelineItemRow: View {
 
     @State private var showDetail = false
 
+    private var displayTime: String {
+        if item.type == .flight, let linkedId = item.linkedId,
+           let (transport, _) = trip.findTransport(linkedId: linkedId),
+           !transport.departureTime.isEmpty, !transport.arrivalTime.isEmpty {
+            return "\(transport.departureTime) - \(transport.arrivalTime)"
+        }
+        return item.time
+    }
+
     var body: some View {
         HStack(alignment: .top, spacing: 0) {
             // Color bar
@@ -190,7 +199,7 @@ private struct TimelineItemRow: View {
                 VStack(alignment: .leading, spacing: 4) {
                     // Time badge + emoji icon
                     HStack(spacing: 5) {
-                        Text(item.time)
+                        Text(displayTime)
                             .font(.system(size: 10, weight: .bold))
                             .foregroundColor(item.type.color)
                             .padding(.horizontal, 7)

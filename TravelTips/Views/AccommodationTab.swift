@@ -239,22 +239,12 @@ private struct AddHotelSheet: View {
                                 .foregroundColor(Theme.textSec)
                                 .textCase(.uppercase)
                                 .kerning(0.8)
-                            if editing != nil {
-                                Text(fmtDate(checkInDate))
-                                    .font(.system(size: 14))
-                                    .padding(10)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    .background(Color(.systemGray6))
-                                    .cornerRadius(10)
-                                    .foregroundColor(Theme.textSec)
-                            } else {
-                                DatePicker("", selection: $checkInDate,
-                                           in: trip.startDate...trip.endDate,
-                                           displayedComponents: .date)
-                                    .labelsHidden()
-                                    .datePickerStyle(.compact)
-                                    .tint(Theme.primary)
-                            }
+                            DatePicker("", selection: $checkInDate,
+                                       in: trip.startDate...trip.endDate,
+                                       displayedComponents: .date)
+                                .labelsHidden()
+                                .datePickerStyle(.compact)
+                                .tint(Theme.primary)
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -264,22 +254,12 @@ private struct AddHotelSheet: View {
                                 .foregroundColor(Theme.textSec)
                                 .textCase(.uppercase)
                                 .kerning(0.8)
-                            if editing != nil {
-                                Text(fmtDate(checkOutDate))
-                                    .font(.system(size: 14))
-                                    .padding(10)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    .background(Color(.systemGray6))
-                                    .cornerRadius(10)
-                                    .foregroundColor(Theme.textSec)
-                            } else {
-                                DatePicker("", selection: $checkOutDate,
-                                           in: checkInDate...trip.endDate,
-                                           displayedComponents: .date)
-                                    .labelsHidden()
-                                    .datePickerStyle(.compact)
-                                    .tint(Theme.primary)
-                            }
+                            DatePicker("", selection: $checkOutDate,
+                                       in: checkInDate...trip.endDate,
+                                       displayedComponents: .date)
+                                .labelsHidden()
+                                .datePickerStyle(.compact)
+                                .tint(Theme.primary)
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                     }
@@ -287,66 +267,61 @@ private struct AddHotelSheet: View {
 
                     SheetSaveButton(label: "Save") {
                         guard !hotelName.isEmpty else { return }
+                        let cal = Calendar.current
+                        let days = trip.sortedDays
+
+                        // When editing, remove old nights and linked timeline items first
                         if let editing {
-                            // Update name/address for all nights in this stay's date range
-                            let cal = Calendar.current
-                            for day in trip.sortedDays {
+                            for day in days {
                                 let d = cal.startOfDay(for: day.date)
                                 let s = cal.startOfDay(for: editing.startDate)
                                 let e = cal.startOfDay(for: editing.endDate)
                                 if d >= s && d <= e {
-                                    day.accommodation?.name    = hotelName
-                                    day.accommodation?.address = address
+                                    if let acc = day.accommodation { modelContext.delete(acc) }
+                                    day.accommodation = nil
                                 }
                             }
-                            // Sync check-in / check-out timeline items
                             if let lid = editing.linkedId {
                                 for day in trip.days {
-                                    for item in day.timelineItems where item.linkedId == lid {
-                                        if item.title.hasPrefix("Check-in") {
-                                            item.title = "Check-in · \(hotelName)"
-                                        } else if item.title.hasPrefix("Check-out") {
-                                            item.title = "Check-out · \(hotelName)"
-                                        }
-                                    }
+                                    day.timelineItems.removeAll { $0.linkedId == lid }
                                 }
-                            }
-                        } else {
-                            let cal = Calendar.current
-                            let days = trip.sortedDays
-                            var firstAccId: UUID? = nil
-                            var current = cal.startOfDay(for: checkInDate)
-                            let checkOut = cal.startOfDay(for: checkOutDate)
-
-                            while current < checkOut {
-                                if let matchDay = days.first(where: { cal.isDate($0.date, inSameDayAs: current) }) {
-                                    let acc = Accommodation(name: hotelName, address: address,
-                                                            isCheckIn: current == cal.startOfDay(for: checkInDate))
-                                    modelContext.insert(acc)
-                                    matchDay.accommodation = acc
-                                    if firstAccId == nil { firstAccId = acc.id }
-                                }
-                                current = cal.date(byAdding: .day, value: 1, to: current) ?? checkOut
-                            }
-
-                            if let lid = firstAccId,
-                               let inDay = days.first(where: { cal.isDate($0.date, inSameDayAs: checkInDate) }) {
-                                let tlIn = TimelineItem(time: "--:--", title: "Check-in · \(hotelName)",
-                                                        type: .hotel, linkedId: lid,
-                                                        sortOrder: inDay.timelineItems.count)
-                                modelContext.insert(tlIn)
-                                inDay.timelineItems.append(tlIn)
-                            }
-
-                            if let lid = firstAccId,
-                               let outDay = days.first(where: { cal.isDate($0.date, inSameDayAs: checkOutDate) }) {
-                                let tlOut = TimelineItem(time: "--:--", title: "Check-out · \(hotelName)",
-                                                         type: .hotel, linkedId: lid,
-                                                         sortOrder: outDay.timelineItems.count)
-                                modelContext.insert(tlOut)
-                                outDay.timelineItems.append(tlOut)
                             }
                         }
+
+                        // Create accommodations for the (new) date range
+                        var firstAccId: UUID? = nil
+                        var current = cal.startOfDay(for: checkInDate)
+                        let checkOut = cal.startOfDay(for: checkOutDate)
+
+                        while current < checkOut {
+                            if let matchDay = days.first(where: { cal.isDate($0.date, inSameDayAs: current) }) {
+                                let acc = Accommodation(name: hotelName, address: address,
+                                                        isCheckIn: current == cal.startOfDay(for: checkInDate))
+                                modelContext.insert(acc)
+                                matchDay.accommodation = acc
+                                if firstAccId == nil { firstAccId = acc.id }
+                            }
+                            current = cal.date(byAdding: .day, value: 1, to: current) ?? checkOut
+                        }
+
+                        if let lid = firstAccId,
+                           let inDay = days.first(where: { cal.isDate($0.date, inSameDayAs: checkInDate) }) {
+                            let tlIn = TimelineItem(time: "--:--", title: "Check-in · \(hotelName)",
+                                                    type: .hotel, linkedId: lid,
+                                                    sortOrder: inDay.timelineItems.count)
+                            modelContext.insert(tlIn)
+                            inDay.timelineItems.append(tlIn)
+                        }
+
+                        if let lid = firstAccId,
+                           let outDay = days.first(where: { cal.isDate($0.date, inSameDayAs: checkOutDate) }) {
+                            let tlOut = TimelineItem(time: "--:--", title: "Check-out · \(hotelName)",
+                                                     type: .hotel, linkedId: lid,
+                                                     sortOrder: outDay.timelineItems.count)
+                            modelContext.insert(tlOut)
+                            outDay.timelineItems.append(tlOut)
+                        }
+
                         dismiss()
                     }
                 }
