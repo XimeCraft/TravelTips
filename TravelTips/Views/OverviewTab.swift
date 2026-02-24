@@ -6,15 +6,24 @@ struct OverviewTab: View {
 
     var body: some View {
         ScrollView {
-            LazyVStack(spacing: 0, pinnedViews: []) {
+            LazyVStack(spacing: 0) {
                 // Header
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: 6) {
                     Text("\(trip.emoji) \(trip.name)")
                         .font(.system(size: 26, weight: .heavy))
                         .foregroundColor(Theme.textPrimary)
-                    Text("\(fmtDate(trip.startDate)) – \(fmtDate(trip.endDate)) · \(trip.totalDays) days")
-                        .font(.system(size: 13))
-                        .foregroundColor(Theme.textSec)
+                    HStack(spacing: 6) {
+                        Text("\(fmtDate(trip.startDate)) – \(fmtDate(trip.endDate))")
+                            .font(.system(size: 13))
+                            .foregroundColor(Theme.textSec)
+                        Text("\(trip.totalDays) days")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundColor(Theme.primary)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 2)
+                            .background(Theme.primary.opacity(0.15))
+                            .cornerRadius(8)
+                    }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 20)
@@ -60,8 +69,8 @@ private struct DayCard: View {
                             .foregroundColor(Theme.textSec)
                         Spacer()
                         Text(day.city)
-                            .font(.system(size: 11))
-                            .foregroundColor(Theme.textTer)
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundColor(Theme.textPrimary)
                     }
 
                     Text(day.summary)
@@ -70,24 +79,28 @@ private struct DayCard: View {
                         .lineLimit(2)
                         .padding(.top, 4)
 
-                    // Pills
-                    HStack(spacing: 5) {
-                        if let t = day.transport {
+                    // Pills — MVP2 colors and icons (FlowHStack wraps whole pill to next row)
+                    FlowHStack(spacing: 5) {
+                        if let t = day.firstTransport {
                             PillView(
-                                text: "\(t.type.icon) \(t.type.displayName)",
-                                bg: Color(hex: "E3F2ED"),
-                                fg: Theme.primary
+                                text: "\(t.type.emoji) \(t.type.displayName)",
+                                bg: Theme.transport.opacity(0.15),
+                                fg: Theme.transport
                             )
                         }
                         if day.accommodation?.isCheckIn == true {
-                            PillView(text: "Check-in", bg: Color(hex: "E8F5E9"), fg: Color(hex: "2E7D32"))
+                            PillView(
+                                text: "🏨 Check-in",
+                                bg: Theme.hotel.opacity(0.13),
+                                fg: Theme.hotel
+                            )
                         }
                         let destCount = day.destinations.count
                         if destCount > 0 {
                             PillView(
-                                text: "\(destCount) place\(destCount > 1 ? "s" : "")",
-                                bg: Color(hex: "FFF8E1"),
-                                fg: Color(hex: "F9A825")
+                                text: "📍 \(destCount) place\(destCount > 1 ? "s" : "")",
+                                bg: Theme.attraction.opacity(0.15),
+                                fg: Theme.attraction
                             )
                         }
                     }

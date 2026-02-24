@@ -6,7 +6,7 @@ import SwiftData
 enum TransportType: String, Codable, CaseIterable {
     case flight, drive, train, bus, ferry, other
 
-    var icon: String {
+    var emoji: String {
         switch self {
         case .flight: return "✈️"
         case .drive:  return "🚗"
@@ -18,18 +18,72 @@ enum TransportType: String, Codable, CaseIterable {
     }
 
     var displayName: String { rawValue.capitalized }
+
+    var timelineType: TimelineType {
+        switch self {
+        case .flight: return .flight
+        case .drive:  return .drive
+        case .train:  return .train
+        case .bus:    return .bus
+        case .ferry:  return .ferry
+        case .other:  return .other
+        }
+    }
 }
 
 enum DestinationType: String, Codable, CaseIterable {
     case attraction, activity, restaurant, shopping, other
 
-    var icon: String {
+    var timelineType: TimelineType {
+        switch self {
+        case .attraction: return .attraction
+        case .activity:   return .activity
+        case .restaurant: return .restaurant
+        case .shopping:   return .other
+        case .other:      return .other
+        }
+    }
+
+    var emoji: String {
         switch self {
         case .attraction:  return "🏛️"
         case .activity:    return "🎪"
         case .restaurant:  return "🍽️"
         case .shopping:    return "🛍️"
         case .other:       return "📍"
+        }
+    }
+}
+
+enum TimelineType: String, Codable, CaseIterable {
+    case flight, drive, train, bus, ferry  // → transport blue
+    case hotel                             // → purple
+    case attraction                        // → yellow
+    case restaurant                        // → green (primary)
+    case activity                          // → cyan
+    case other                             // → gray
+
+    var emoji: String {
+        switch self {
+        case .flight:     return "✈️"
+        case .drive:      return "🚗"
+        case .train:      return "🚄"
+        case .bus:        return "🚌"
+        case .ferry:      return "⛴️"
+        case .hotel:      return "🏨"
+        case .attraction: return "🏛️"
+        case .restaurant: return "🍽️"
+        case .activity:   return "🎪"
+        case .other:      return "📝"
+        }
+    }
+
+    var displayName: String { rawValue.capitalized }
+
+    var isTransport: Bool {
+        switch self {
+        case .flight, .drive, .train, .bus, .ferry: return true
+        default: return false
         }
     }
 }
@@ -68,6 +122,31 @@ final class Trip {
 
     var totalDays: Int { daysBetween(startDate, endDate) }
     var daysLeft: Int  { daysUntil(startDate) }
+
+    // MARK: Cross-day linked item lookup
+
+    func findTransport(linkedId: UUID) -> (TransportInfo, TripDay)? {
+        for day in days {
+            for t in day.transports where t.id == linkedId {
+                return (t, day)
+            }
+        }
+        return nil
+    }
+
+    func findAccommodation(linkedId: UUID) -> Accommodation? {
+        for day in days {
+            if day.accommodation?.id == linkedId { return day.accommodation }
+        }
+        return nil
+    }
+
+    func findDestination(linkedId: UUID) -> Destination? {
+        for day in days {
+            for d in day.destinations where d.id == linkedId { return d }
+        }
+        return nil
+    }
 }
 
 // MARK: - TripDay
@@ -79,26 +158,32 @@ final class TripDay {
     var city: String
     var summary: String
     var sortOrder: Int
+    var dayDone: Bool
 
-    @Relationship(deleteRule: .cascade) var transport: TransportInfo?
+    @Relationship(deleteRule: .cascade) var transports: [TransportInfo] = []
     @Relationship(deleteRule: .cascade) var accommodation: Accommodation?
     @Relationship(deleteRule: .cascade) var destinations: [Destination] = []
-    @Relationship(deleteRule: .cascade) var details: [DayDetail] = []
+    @Relationship(deleteRule: .cascade) var timelineItems: [TimelineItem] = []
 
-    init(date: Date, city: String, summary: String, sortOrder: Int) {
+    init(date: Date, city: String, summary: String, sortOrder: Int, dayDone: Bool = false) {
         self.id = UUID()
         self.date = date
         self.city = city
         self.summary = summary
         self.sortOrder = sortOrder
+        self.dayDone = dayDone
     }
 
     var sortedDestinations: [Destination] {
         destinations.sorted { $0.sortOrder < $1.sortOrder }
     }
 
-    var sortedDetails: [DayDetail] {
-        details.sorted { $0.sortOrder < $1.sortOrder }
+    var sortedTimelineItems: [TimelineItem] {
+        timelineItems.sorted { $0.sortOrder < $1.sortOrder }
+    }
+
+    var firstTransport: TransportInfo? {
+        transports.first
     }
 }
 
@@ -171,25 +256,70 @@ final class Destination {
     }
 }
 
-// MARK: - DayDetail
+// MARK: - TimelineItem (MVP2: replaces DayDetail, adds type + linkedId)
 
 @Model
-final class DayDetail {
+final class TimelineItem {
     @Attribute(.unique) var id: UUID
     var time: String
     var title: String
     var note: String?
+    var type: TimelineType
+    var linkedId: UUID?
     var isDone: Bool
     var sortOrder: Int
 
     init(time: String, title: String, note: String? = nil,
+         type: TimelineType = .other, linkedId: UUID? = nil,
          isDone: Bool = false, sortOrder: Int = 0) {
         self.id = UUID()
         self.time = time
         self.title = title
         self.note = note
+        self.type = type
+        self.linkedId = linkedId
         self.isDone = isDone
         self.sortOrder = sortOrder
+    }
+}
+
+// MARK: - TaskItem (manual todos in Todo tab)
+
+@Model
+final class TaskItem {
+    @Attribute(.unique) var id: UUID
+    var title: String
+    var isDone: Bool
+    var createdAt: Date
+
+    init(title: String) {
+        self.id = UUID()
+        self.title = title
+        self.isDone = false
+        self.createdAt = Date()
+    }
+}
+
+// MARK: - Attachment (MVP3)
+
+@Model
+final class Attachment {
+    @Attribute(.unique) var id: UUID
+    var name: String
+    var fileType: String   // "pdf" or "image"
+    var fileSize: String   // display string e.g. "2.4 MB"
+    var localPath: String  // relative path from Documents dir e.g. "attachments/abc.pdf"
+    var linkedItemId: UUID
+    var createdAt: Date
+
+    init(name: String, fileType: String, fileSize: String, localPath: String, linkedItemId: UUID) {
+        self.id = UUID()
+        self.name = name
+        self.fileType = fileType
+        self.fileSize = fileSize
+        self.localPath = localPath
+        self.linkedItemId = linkedItemId
+        self.createdAt = Date()
     }
 }
 

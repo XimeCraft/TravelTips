@@ -1,13 +1,17 @@
 import SwiftUI
+import SwiftData
 
 struct TripsListView: View {
     let trips: [Trip]
     let onSelect: (Trip) -> Void
 
+    @Environment(\.modelContext) private var modelContext
+    @State private var showAddSheet = false
+
     var body: some View {
-        ScrollView {
-            LazyVStack(spacing: 0) {
-                // Header
+        ZStack(alignment: .topTrailing) {
+            List {
+                // Title header
                 VStack(alignment: .leading, spacing: 2) {
                     Text("My Trips")
                         .font(.system(size: 30, weight: .heavy))
@@ -19,34 +23,40 @@ struct TripsListView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 20)
                 .padding(.top, 12)
+                .padding(.bottom, 6)
+                .listRowInsets(EdgeInsets())
+                .listRowBackground(Theme.bg)
+                .listRowSeparator(.hidden)
 
                 SectionHeader(title: "Upcoming")
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Theme.bg)
+                    .listRowSeparator(.hidden)
 
                 ForEach(trips) { trip in
                     TripCard(trip: trip, onTap: { onSelect(trip) })
+                        .swipeActions(edge: .trailing) {
+                            Button(role: .destructive) {
+                                modelContext.delete(trip)
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
+                        }
+                        .listRowInsets(EdgeInsets())
+                        .listRowBackground(Theme.bg)
+                        .listRowSeparator(.hidden)
                 }
-
-                // Add new trip placeholder
-                Button(action: {}) {
-                    HStack {
-                        Image(systemName: "plus")
-                        Text("Add New Trip")
-                    }
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(Theme.primary.opacity(0.6))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 20)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 16)
-                            .stroke(Theme.primary.opacity(0.25), style: StrokeStyle(lineWidth: 2, dash: [6]))
-                    )
-                }
-                .buttonStyle(.plain)
-                .padding(.horizontal, 20)
-                .padding(.top, 6)
-
-                Spacer(minLength: 20)
             }
+            .listStyle(.plain)
+            .scrollContentBackground(.hidden)
+
+            AddButton { showAddSheet = true }
+                .padding(.top, 14)
+                .padding(.trailing, 20)
+        }
+        .sheet(isPresented: $showAddSheet) {
+            NewTripSheet()
+                .presentationDetents([.medium])
         }
     }
 }
@@ -60,7 +70,6 @@ private struct TripCard: View {
     var body: some View {
         CardView(action: onTap) {
             HStack(spacing: 14) {
-                // Emoji badge
                 ZStack {
                     RoundedRectangle(cornerRadius: 14)
                         .fill(
@@ -75,18 +84,19 @@ private struct TripCard: View {
                 }
                 .frame(width: 56, height: 56)
 
-                // Info
                 VStack(alignment: .leading, spacing: 2) {
                     Text(trip.name)
                         .font(.system(size: 17, weight: .bold))
                         .foregroundColor(Theme.textPrimary)
-                    Text("\(fmtDate(trip.startDate)) – \(fmtDate(trip.endDate)) · \(trip.totalDays) days")
+                    Text("\(fmtDate(trip.startDate)) – \(fmtDate(trip.endDate))")
+                        .font(.system(size: 13))
+                        .foregroundColor(Theme.textSec)
+                    Text("\(trip.totalDays) days")
                         .font(.system(size: 13))
                         .foregroundColor(Theme.textSec)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-                // Countdown
                 let d = trip.daysLeft
                 VStack(spacing: 0) {
                     Text(d > 0 ? "\(d)" : "Now")
@@ -97,6 +107,121 @@ private struct TripCard: View {
                             .font(.system(size: 10, weight: .medium))
                             .foregroundColor(Theme.textTer)
                     }
+                }
+            }
+        }
+    }
+}
+
+// MARK: - New Trip Sheet
+
+private struct NewTripSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
+
+    @State private var name = ""
+    @State private var emoji = ""
+    @State private var startDate = Date()
+    @State private var endDate = Date().addingTimeInterval(86400 * 7)
+
+    private let quickEmojis = ["🇨🇳","🇳🇿","🇸🇬","🇯🇵","🇰🇷","🇺🇸","🇬🇧","🇫🇷","🇩🇪","🇮🇹",
+                               "🇪🇸","🇹🇭","🇦🇪","🇪🇬","🇲🇦","🇹🇷","🇬🇷","🇵🇹","🇦🇺","✈️","🏖️","🏔️","🗺️","🧳"]
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 0) {
+                    SheetField(label: "Trip Name", text: $name, placeholder: "e.g. Egypt")
+
+                    // Emoji field with quick-select row
+                    VStack(alignment: .leading, spacing: 5) {
+                        Text("Emoji")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundColor(Theme.textSec)
+                            .textCase(.uppercase)
+                            .kerning(0.8)
+                        TextField("🌍", text: $emoji)
+                            .font(.system(size: 22))
+                            .padding(10)
+                            .background(Color(.systemGray6))
+                            .cornerRadius(10)
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 8) {
+                                ForEach(quickEmojis, id: \.self) { flag in
+                                    Button {
+                                        emoji = flag
+                                    } label: {
+                                        Text(flag)
+                                            .font(.system(size: 24))
+                                            .padding(6)
+                                            .background(Color(.systemGray6))
+                                            .cornerRadius(8)
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                            .padding(.vertical, 4)
+                        }
+                    }
+                    .padding(.bottom, 4)
+
+                    VStack(alignment: .leading, spacing: 5) {
+                        Text("Start Date")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundColor(Theme.textSec)
+                            .textCase(.uppercase)
+                            .kerning(0.8)
+                        DatePicker("", selection: $startDate, displayedComponents: .date)
+                            .labelsHidden()
+                            .datePickerStyle(.compact)
+                            .tint(Theme.primary)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.bottom, 4)
+
+                    VStack(alignment: .leading, spacing: 5) {
+                        Text("End Date")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundColor(Theme.textSec)
+                            .textCase(.uppercase)
+                            .kerning(0.8)
+                        DatePicker("", selection: $endDate, in: startDate..., displayedComponents: .date)
+                            .labelsHidden()
+                            .datePickerStyle(.compact)
+                            .tint(Theme.primary)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.bottom, 4)
+
+                    SheetSaveButton(label: "Create Trip") {
+                        guard !name.isEmpty else { return }
+                        let trip = Trip(
+                            name: name,
+                            emoji: emoji.isEmpty ? "✈️" : emoji,
+                            startDate: startDate,
+                            endDate: endDate
+                        )
+                        let calendar = Calendar.current
+                        var current = startDate
+                        var sortOrder = 0
+                        while current <= endDate {
+                            let day = TripDay(date: current, city: "", summary: "", sortOrder: sortOrder)
+                            trip.days.append(day)
+                            current = calendar.date(byAdding: .day, value: 1, to: current) ?? endDate.addingTimeInterval(86400)
+                            sortOrder += 1
+                        }
+                        modelContext.insert(trip)
+                        dismiss()
+                    }
+                }
+                .padding(20)
+            }
+            .navigationTitle("New Trip")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                        .foregroundColor(Theme.primary)
                 }
             }
         }

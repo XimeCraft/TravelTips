@@ -117,6 +117,7 @@ private struct TripContentView: View {
     ContentView()
         .modelContainer(for: [Trip.self, TripDay.self, TransportInfo.self,
                                Accommodation.self, Destination.self,
-                               DayDetail.self, InfoItem.self],
+                               TimelineItem.self, InfoItem.self, TaskItem.self,
+                               Attachment.self],
                         inMemory: true)
 }
