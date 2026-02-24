@@ -300,6 +300,29 @@ final class TaskItem {
     }
 }
 
+// MARK: - Attachment (MVP3)
+
+@Model
+final class Attachment {
+    @Attribute(.unique) var id: UUID
+    var name: String
+    var fileType: String   // "pdf" or "image"
+    var fileSize: String   // display string e.g. "2.4 MB"
+    var localPath: String  // relative path from Documents dir e.g. "attachments/abc.pdf"
+    var linkedItemId: UUID
+    var createdAt: Date
+
+    init(name: String, fileType: String, fileSize: String, localPath: String, linkedItemId: UUID) {
+        self.id = UUID()
+        self.name = name
+        self.fileType = fileType
+        self.fileSize = fileSize
+        self.localPath = localPath
+        self.linkedItemId = linkedItemId
+        self.createdAt = Date()
+    }
+}
+
 // MARK: - InfoItem
 
 @Model

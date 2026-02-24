@@ -6,6 +6,8 @@ struct TransportTab: View {
 
     @Environment(\.modelContext) private var modelContext
     @State private var showAddSheet = false
+    @State private var selectedDetail: TransportDetailItem? = nil
+    @State private var selectedEdit: TransportDetailItem? = nil
 
     private var transportDays: [(Int, TripDay, TransportInfo)] {
         var result: [(Int, TripDay, TransportInfo)] = []
@@ -38,17 +40,20 @@ struct TransportTab: View {
                 .listRowSeparator(.hidden)
 
                 ForEach(transportDays, id: \.2.id) { dayNum, day, transport in
-                    TransportCard(day: day, transport: transport, dayNumber: dayNum)
-                        .swipeActions(edge: .trailing) {
-                            Button(role: .destructive) {
-                                deleteTransport(transport, from: day)
-                            } label: {
-                                Label("Delete", systemImage: "trash")
-                            }
+                    TransportCard(day: day, transport: transport, dayNumber: dayNum,
+                                  onTap: { selectedEdit = TransportDetailItem(transport: transport, day: day) }) {
+                        selectedDetail = TransportDetailItem(transport: transport, day: day)
+                    }
+                    .swipeActions(edge: .trailing) {
+                        Button(role: .destructive) {
+                            deleteTransport(transport, from: day)
+                        } label: {
+                            Label("Delete", systemImage: "trash")
                         }
-                        .listRowInsets(EdgeInsets())
-                        .listRowBackground(Theme.bg)
-                        .listRowSeparator(.hidden)
+                    }
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Theme.bg)
+                    .listRowSeparator(.hidden)
                 }
             }
             .listStyle(.plain)
@@ -61,6 +66,12 @@ struct TransportTab: View {
         .sheet(isPresented: $showAddSheet) {
             AddTransportSheet(trip: trip)
                 .presentationDetents([.medium])
+        }
+        .sheet(item: $selectedDetail) { item in
+            TransportDetailView(transport: item.transport, day: item.day)
+        }
+        .sheet(item: $selectedEdit) { item in
+            AddTransportSheet(trip: trip, editing: item.transport)
         }
     }
 
@@ -75,13 +86,25 @@ struct TransportTab: View {
     }
 }
 
+// MARK: - Transport Detail Item (Identifiable wrapper)
+
+struct TransportDetailItem: Identifiable {
+    var id: UUID { transport.id }
+    let transport: TransportInfo
+    let day: TripDay
+}
+
+// MARK: - Transport Card
+
 private struct TransportCard: View {
     let day: TripDay
     let transport: TransportInfo
     let dayNumber: Int
+    let onTap: () -> Void
+    let onViewDetail: () -> Void
 
     var body: some View {
-        CardView {
+        CardView(action: onTap) {
             VStack(spacing: 12) {
                 HStack {
                     Text("Day \(dayNumber) · \(fmtDate(day.date))")
@@ -142,27 +165,39 @@ private struct TransportCard: View {
                     .frame(maxWidth: .infinity)
                 }
 
-                ViewDetailsButton(color: Theme.transport)
+                ViewDetailsButton(color: Theme.transport, action: onViewDetail)
             }
         }
     }
 }
 
-// MARK: - Add Transport Sheet
+// MARK: - Add / Edit Transport Sheet
 
 private struct AddTransportSheet: View {
     let trip: Trip
+    private let editing: TransportInfo?
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
 
     @State private var selectedDayIndex = 0
-    @State private var type: TransportType = .flight
-    @State private var from = ""
-    @State private var to = ""
-    @State private var depTime = ""
-    @State private var arrTime = ""
-    @State private var detail = ""
+    @State private var type: TransportType
+    @State private var from: String
+    @State private var to: String
+    @State private var depTime: String
+    @State private var arrTime: String
+    @State private var detail: String
+
+    init(trip: Trip, editing: TransportInfo? = nil) {
+        self.trip = trip
+        self.editing = editing
+        _type    = State(initialValue: editing?.type ?? .flight)
+        _from    = State(initialValue: editing?.from ?? "")
+        _to      = State(initialValue: editing?.to ?? "")
+        _depTime = State(initialValue: editing?.departureTime ?? "")
+        _arrTime = State(initialValue: editing?.arrivalTime ?? "")
+        _detail  = State(initialValue: editing?.detail ?? "")
+    }
 
     private var days: [TripDay] { trip.sortedDays }
 
@@ -171,27 +206,29 @@ private struct AddTransportSheet: View {
             ScrollView {
                 VStack(spacing: 0) {
                     HStack(spacing: 10) {
-                        VStack(alignment: .leading, spacing: 5) {
-                            Text("Day")
-                                .font(.system(size: 11, weight: .bold))
-                                .foregroundColor(Theme.textSec)
-                                .textCase(.uppercase)
-                                .kerning(0.8)
-                            if !days.isEmpty {
-                                Picker("Day", selection: $selectedDayIndex) {
-                                    ForEach(Array(days.enumerated()), id: \.offset) { i, day in
-                                        Text("Day \(i + 1), \(fmtDateShort(day.date))").tag(i)
+                        if editing == nil {
+                            VStack(alignment: .leading, spacing: 5) {
+                                Text("Day")
+                                    .font(.system(size: 11, weight: .bold))
+                                    .foregroundColor(Theme.textSec)
+                                    .textCase(.uppercase)
+                                    .kerning(0.8)
+                                if !days.isEmpty {
+                                    Picker("Day", selection: $selectedDayIndex) {
+                                        ForEach(Array(days.enumerated()), id: \.offset) { i, day in
+                                            Text("Day \(i + 1), \(fmtDateShort(day.date))").tag(i)
+                                        }
                                     }
+                                    .pickerStyle(.menu)
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 6)
+                                    .background(Color(.systemGray6))
+                                    .cornerRadius(10)
+                                    .tint(Theme.primary)
                                 }
-                                .pickerStyle(.menu)
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 6)
-                                .background(Color(.systemGray6))
-                                .cornerRadius(10)
-                                .tint(Theme.primary)
                             }
+                            .frame(maxWidth: .infinity, alignment: .leading)
                         }
-                        .frame(maxWidth: .infinity, alignment: .leading)
 
                         VStack(alignment: .leading, spacing: 5) {
                             Text("Type")
@@ -226,30 +263,44 @@ private struct AddTransportSheet: View {
                     SheetField(label: "Detail", text: $detail, placeholder: "Flight number, etc.")
 
                     SheetSaveButton(label: "Save") {
-                        guard !from.isEmpty, !to.isEmpty, !days.isEmpty else { return }
-                        let transport = TransportInfo(
-                            type: type, detail: detail, from: from, to: to,
-                            departureTime: depTime, arrivalTime: arrTime
-                        )
-                        modelContext.insert(transport)
-                        days[selectedDayIndex].transports.append(transport)
+                        if let editing {
+                            editing.type = type
+                            editing.from = from
+                            editing.to   = to
+                            editing.departureTime = depTime
+                            editing.arrivalTime   = arrTime
+                            editing.detail        = detail
+                            for day in trip.days {
+                                for item in day.timelineItems where item.linkedId == editing.id {
+                                    item.title = "\(from) → \(to)"
+                                    item.time  = depTime.isEmpty ? "--:--" : depTime
+                                }
+                            }
+                        } else {
+                            guard !from.isEmpty, !to.isEmpty, !days.isEmpty else { return }
+                            let transport = TransportInfo(
+                                type: type, detail: detail, from: from, to: to,
+                                departureTime: depTime, arrivalTime: arrTime
+                            )
+                            modelContext.insert(transport)
+                            days[selectedDayIndex].transports.append(transport)
 
-                        let tlItem = TimelineItem(
-                            time: depTime.isEmpty ? "--:--" : depTime,
-                            title: "\(from) → \(to)",
-                            type: type.timelineType,
-                            linkedId: transport.id,
-                            sortOrder: days[selectedDayIndex].timelineItems.count
-                        )
-                        modelContext.insert(tlItem)
-                        days[selectedDayIndex].timelineItems.append(tlItem)
-
+                            let tlItem = TimelineItem(
+                                time: depTime.isEmpty ? "--:--" : depTime,
+                                title: "\(from) → \(to)",
+                                type: type.timelineType,
+                                linkedId: transport.id,
+                                sortOrder: days[selectedDayIndex].timelineItems.count
+                            )
+                            modelContext.insert(tlItem)
+                            days[selectedDayIndex].timelineItems.append(tlItem)
+                        }
                         dismiss()
                     }
                 }
                 .padding(20)
             }
-            .navigationTitle("Add Transport")
+            .navigationTitle(editing != nil ? "Edit Transport" : "Add Transport")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {

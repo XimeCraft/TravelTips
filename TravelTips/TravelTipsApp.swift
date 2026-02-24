@@ -15,6 +15,7 @@ struct TravelTipsApp: App {
             TimelineItem.self,
             InfoItem.self,
             TaskItem.self,
+            Attachment.self,
         ])
         let config = ModelConfiguration(schema: schema)
         do {

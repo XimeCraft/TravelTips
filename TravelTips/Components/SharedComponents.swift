@@ -185,19 +185,27 @@ struct AddButton: View {
     }
 }
 
-// MARK: - View Details Button (MVP2: centered, tinted background)
+// MARK: - View Details Button (MVP2: centered, tinted background; MVP3: optional action)
 
 struct ViewDetailsButton: View {
     let color: Color
+    var action: (() -> Void)? = nil
 
     var body: some View {
-        Text("View details ›")
+        let label = Text("View details ›")
             .font(.system(size: 12, weight: .semibold))
             .foregroundColor(color)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 8)
             .background(color.opacity(0.08))
             .cornerRadius(10)
+
+        if let action {
+            Button(action: action) { label }
+                .buttonStyle(.plain)
+        } else {
+            label
+        }
     }
 }
 

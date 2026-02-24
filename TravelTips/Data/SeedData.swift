@@ -4,10 +4,8 @@ import SwiftData
 // MARK: - First-launch seed
 
 func seedIfNeeded(context: ModelContext) {
-    let descriptor = FetchDescriptor<Trip>()
-    let count = (try? context.fetchCount(descriptor)) ?? 0
+    let count = (try? context.fetchCount(FetchDescriptor<Trip>())) ?? 0
     guard count == 0 else { return }
-
     let trip = makeEgyptTrip()
     context.insert(trip)
     try? context.save()

@@ -171,6 +171,8 @@ private struct TimelineItemRow: View {
     let trip: Trip
     let isLast: Bool
 
+    @State private var showDetail = false
+
     var body: some View {
         HStack(alignment: .top, spacing: 0) {
             // Color bar
@@ -218,11 +220,18 @@ private struct TimelineItemRow: View {
                         LinkedPreview(linkedId: linkedId, itemType: item.type, trip: trip)
                     }
 
-                    // View details
-                    Text("View details ›")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundColor(item.type.color)
-                        .padding(.top, 2)
+                    // View details — only for linked items
+                    if item.linkedId != nil {
+                        Button {
+                            showDetail = true
+                        } label: {
+                            Text("View details ›")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundColor(item.type.color)
+                                .padding(.top, 2)
+                        }
+                        .buttonStyle(.plain)
+                    }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.trailing, 12)
@@ -232,9 +241,29 @@ private struct TimelineItemRow: View {
         }
         .opacity(item.isDone ? 0.4 : 1.0)
         .animation(.easeInOut(duration: 0.3), value: item.isDone)
+        .sheet(isPresented: $showDetail) {
+            resolvedDetailView
+        }
 
         if !isLast {
             Divider().padding(.leading, 4)
+        }
+    }
+
+    @ViewBuilder
+    private var resolvedDetailView: some View {
+        if let linkedId = item.linkedId {
+            if item.type.isTransport, let (transport, day) = trip.findTransport(linkedId: linkedId) {
+                TransportDetailView(transport: transport, day: day)
+            } else if item.type == .hotel {
+                HotelDetailView(trip: trip, linkedId: linkedId)
+            } else if let dest = trip.findDestination(linkedId: linkedId) {
+                PlaceDetailView(dest: dest, trip: trip)
+            } else {
+                Text("Detail not available")
+                    .foregroundColor(Theme.textSec)
+                    .padding()
+            }
         }
     }
 }

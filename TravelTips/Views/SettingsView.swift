@@ -1,18 +1,14 @@
 import SwiftUI
+import UserNotifications
 
 struct SettingsView: View {
-    private let items: [SettingItem] = [
-        SettingItem(icon: "globe",           title: "Language",       subtitle: "English"),
-        SettingItem(icon: "bell.fill",       title: "Notifications",  subtitle: "On"),
-        SettingItem(icon: "cloud.fill",      title: "Backup & Sync",  subtitle: "iCloud"),
-        SettingItem(icon: "paintbrush.fill", title: "Appearance",     subtitle: "System"),
-        SettingItem(icon: "questionmark.circle.fill", title: "Help & Feedback", subtitle: ""),
-        SettingItem(icon: "doc.text.fill",   title: "About",          subtitle: "v1.0"),
-    ]
+    @AppStorage("appLanguage") private var language: String = "en"
+    @AppStorage("notificationsEnabled") private var notificationsEnabled: Bool = true
 
     var body: some View {
         ScrollView {
             LazyVStack(spacing: 0) {
+                // Header
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Settings")
                         .font(.system(size: 30, weight: .heavy))
@@ -23,40 +19,95 @@ struct SettingsView: View {
                 .padding(.top, 12)
                 .padding(.bottom, 10)
 
-                ForEach(items) { item in
-                    CardView {
-                        HStack(spacing: 12) {
-                            Image(systemName: item.icon)
-                                .font(.system(size: 20))
-                                .foregroundColor(Theme.primary)
-                                .frame(width: 26)
-                            Text(item.title)
-                                .font(.system(size: 15, weight: .medium))
-                                .foregroundColor(Theme.textPrimary)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                            if !item.subtitle.isEmpty {
-                                Text(item.subtitle)
-                                    .font(.system(size: 13))
-                                    .foregroundColor(Theme.textSec)
+                SectionHeader(title: "Preferences")
+
+                // Language
+                CardView {
+                    HStack(spacing: 12) {
+                        Image(systemName: "globe")
+                            .font(.system(size: 20))
+                            .foregroundColor(Theme.primary)
+                            .frame(width: 26)
+                        Text("Language")
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundColor(Theme.textPrimary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        HStack(spacing: 4) {
+                            ForEach([("en", "EN"), ("zh", "中文")], id: \.0) { code, label in
+                                Button {
+                                    language = code
+                                } label: {
+                                    Text(label)
+                                        .font(.system(size: 12, weight: .semibold))
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 6)
+                                        .background(language == code ? Theme.primary : Color(.systemGray5))
+                                        .foregroundColor(language == code ? .white : Theme.textSec)
+                                        .cornerRadius(8)
+                                }
+                                .buttonStyle(.plain)
                             }
-                            Image(systemName: "chevron.right")
-                                .font(.system(size: 12))
-                                .foregroundColor(Color(.systemGray3))
                         }
                     }
+                }
+
+                // Notifications
+                CardView {
+                    HStack(spacing: 12) {
+                        Image(systemName: "bell.fill")
+                            .font(.system(size: 20))
+                            .foregroundColor(Theme.primary)
+                            .frame(width: 26)
+                        Text("Notifications")
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundColor(Theme.textPrimary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        Toggle("", isOn: $notificationsEnabled)
+                            .labelsHidden()
+                            .tint(Theme.primary)
+                            .onChange(of: notificationsEnabled) { _, enabled in
+                                if enabled { requestNotificationPermission() }
+                            }
+                    }
+                }
+
+                SectionHeader(title: "About")
+
+                // About card
+                CardView {
+                    VStack(alignment: .center, spacing: 10) {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 14)
+                                .fill(LinearGradient(
+                                    colors: [Theme.primary, Theme.primaryLight],
+                                    startPoint: .topLeading, endPoint: .bottomTrailing
+                                ))
+                                .frame(width: 52, height: 52)
+                            Text("🧳")
+                                .font(.system(size: 24))
+                        }
+                        Text("TripCard")
+                            .font(.system(size: 17, weight: .bold))
+                            .foregroundColor(Theme.textPrimary)
+                        Text("Version 1.0.0")
+                            .font(.system(size: 12))
+                            .foregroundColor(Theme.textSec)
+                        Text("Your offline travel companion.\nOrganize itineraries, store tickets & documents.")
+                            .font(.system(size: 11))
+                            .foregroundColor(Theme.textTer)
+                            .multilineTextAlignment(.center)
+                            .lineSpacing(3)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 6)
                 }
 
                 Spacer(minLength: 20)
             }
         }
     }
-}
 
-// MARK: - Data
-
-private struct SettingItem: Identifiable {
-    let id = UUID()
-    let icon: String
-    let title: String
-    let subtitle: String
+    private func requestNotificationPermission() {
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { _, _ in }
+    }
 }
