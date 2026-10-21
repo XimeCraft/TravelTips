@@ -97,13 +97,28 @@ private struct TripCard: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-                let d = trip.daysLeft
+                let toStart = trip.daysLeft               // days until start day
+                let toEnd = daysUntil(trip.endDate)       // negative once the end day has passed
                 VStack(spacing: 0) {
-                    Text(d > 0 ? "\(d)" : "Now")
-                        .font(.system(size: 24, weight: .heavy))
-                        .foregroundColor(Theme.primary)
-                    if d > 0 {
+                    if toStart > 0 {
+                        // Upcoming
+                        Text("\(toStart)")
+                            .font(.system(size: 24, weight: .heavy))
+                            .foregroundColor(Theme.primary)
                         Text("days left")
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundColor(Theme.textTer)
+                    } else if toEnd >= 0 {
+                        // In progress
+                        Text("Now")
+                            .font(.system(size: 24, weight: .heavy))
+                            .foregroundColor(Theme.primary)
+                    } else {
+                        // Ended — show days since the end day, e.g. "-25"
+                        Text("\(toEnd)")
+                            .font(.system(size: 24, weight: .heavy))
+                            .foregroundColor(Theme.textTer)
+                        Text("days ago")
                             .font(.system(size: 10, weight: .medium))
                             .foregroundColor(Theme.textTer)
                     }

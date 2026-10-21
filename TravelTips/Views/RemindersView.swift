@@ -203,7 +203,7 @@ private struct TaskCard: View {
         }
         .opacity(task.isDone ? 0.45 : 1.0)
         .animation(.easeInOut(duration: 0.25), value: task.isDone)
-        .onChange(of: isFocused) { newValue in
+        .onChange(of: isFocused) { _, newValue in
             if !newValue { isEditing = false }
         }
     }

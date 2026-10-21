@@ -89,6 +89,8 @@ private struct DayCard: View {
     let day: TripDay
     let trip: Trip
 
+    @Environment(\.modelContext) private var modelContext
+
     private var items: [TimelineItem] { day.sortedTimelineItems }
     private var doneCount: Int { items.filter { $0.isDone }.count }
 
@@ -131,7 +133,18 @@ private struct DayCard: View {
                             // linked items must be deleted from Transport/Hotels/Places tab
                             if item.linkedId == nil {
                                 Button(role: .destructive) {
-                                    withAnimation { deletionQueue.append(item) }
+                                    delete(item)
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                            }
+                        }
+                        .contextMenu {
+                            // Reliable fallback: the day-paging TabView can intercept the
+                            // horizontal swipe gesture, so offer delete via long-press too.
+                            if item.linkedId == nil {
+                                Button(role: .destructive) {
+                                    delete(item)
                                 } label: {
                                     Label("Delete", systemImage: "trash")
                                 }
@@ -148,19 +161,14 @@ private struct DayCard: View {
         .background(Theme.card)
         .clipShape(RoundedRectangle(cornerRadius: 20))
         .shadow(color: .black.opacity(0.06), radius: 12, x: 0, y: 2)
-        .onChange(of: deletionQueue.count) { _ in processDeletes() }
     }
 
-    // Deletion is deferred to avoid SwiftData mutation-during-render
-    @State private var deletionQueue: [TimelineItem] = []
-
-    private func processDeletes() {
-        for item in deletionQueue {
-            if let idx = day.timelineItems.firstIndex(where: { $0.id == item.id }) {
-                day.timelineItems.remove(at: idx)
-            }
+    // Deferred to the next runloop tick to avoid mutating SwiftData during view render.
+    private func delete(_ item: TimelineItem) {
+        DispatchQueue.main.async {
+            day.timelineItems.removeAll { $0.id == item.id }
+            modelContext.delete(item)
         }
-        deletionQueue.removeAll()
     }
 }
 
@@ -222,6 +230,13 @@ private struct TimelineItemRow: View {
                             .font(.system(size: 11))
                             .foregroundColor(Theme.textSec)
                             .lineSpacing(3)
+                    }
+
+                    // Address
+                    if let address = item.address, !address.isEmpty {
+                        Text("📍 \(address)")
+                            .font(.system(size: 11))
+                            .foregroundColor(Theme.textSec)
                     }
 
                     // Linked preview
@@ -366,6 +381,7 @@ private struct AddTimelineItemSheet: View {
 
     @State private var time = ""
     @State private var title = ""
+    @State private var address = ""
     @State private var note = ""
     @State private var type: TimelineType = .other
 
@@ -375,6 +391,7 @@ private struct AddTimelineItemSheet: View {
                 VStack(spacing: 0) {
                     SheetField(label: "Time", text: $time, placeholder: "e.g. 08:00")
                     SheetField(label: "Title", text: $title, placeholder: "What to do")
+                    SheetField(label: "Address", text: $address, placeholder: "Location address")
 
                     VStack(alignment: .leading, spacing: 5) {
                         Text("Type")
@@ -404,6 +421,7 @@ private struct AddTimelineItemSheet: View {
                             time: time.isEmpty ? "--:--" : time,
                             title: title,
                             note: note.isEmpty ? nil : note,
+                            address: address.isEmpty ? nil : address,
                             type: type,
                             sortOrder: day.timelineItems.count
                         )

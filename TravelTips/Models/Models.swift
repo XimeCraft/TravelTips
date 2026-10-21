@@ -264,18 +264,20 @@ final class TimelineItem {
     var time: String
     var title: String
     var note: String?
+    var address: String?
     var type: TimelineType
     var linkedId: UUID?
     var isDone: Bool
     var sortOrder: Int
 
-    init(time: String, title: String, note: String? = nil,
+    init(time: String, title: String, note: String? = nil, address: String? = nil,
          type: TimelineType = .other, linkedId: UUID? = nil,
          isDone: Bool = false, sortOrder: Int = 0) {
         self.id = UUID()
         self.time = time
         self.title = title
         self.note = note
+        self.address = address
         self.type = type
         self.linkedId = linkedId
         self.isDone = isDone
@@ -338,6 +340,46 @@ final class InfoItem {
         self.title = title
         self.details = details
         self.isDone = isDone
+        self.sortOrder = sortOrder
+    }
+}
+
+// MARK: - Packing (global, shared across trips)
+
+@Model
+final class PackingItem {
+    @Attribute(.unique) var id: UUID
+    var name: String
+    var tag: String?        // references PackingTag.name; optional
+    var quantity: Int
+    var notes: String?
+    var isPacked: Bool
+    var isArchived: Bool
+    var sortOrder: Int
+
+    init(name: String, tag: String? = nil, quantity: Int = 1,
+         notes: String? = nil, isPacked: Bool = false,
+         isArchived: Bool = false, sortOrder: Int = 0) {
+        self.id = UUID()
+        self.name = name
+        self.tag = tag
+        self.quantity = quantity
+        self.notes = notes
+        self.isPacked = isPacked
+        self.isArchived = isArchived
+        self.sortOrder = sortOrder
+    }
+}
+
+@Model
+final class PackingTag {
+    @Attribute(.unique) var id: UUID
+    var name: String
+    var sortOrder: Int
+
+    init(name: String, sortOrder: Int = 0) {
+        self.id = UUID()
+        self.name = name
         self.sortOrder = sortOrder
     }
 }

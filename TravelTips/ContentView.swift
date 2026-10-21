@@ -84,8 +84,10 @@ struct ContentView: View {
             )
         }
         .ignoresSafeArea(edges: .bottom)
+        .preferredColorScheme(.light)   // app is designed light-only; lock it to avoid dark-on-dark
         .onAppear {
             seedIfNeeded(context: modelContext)
+            seedPackingIfNeeded(context: modelContext)
         }
     }
 }
@@ -107,6 +109,8 @@ private struct TripContentView: View {
             AccommodationTab(trip: trip)
         case .destinations:
             DestinationsTab(trip: trip)
+        case .packing:
+            PackingTab()
         case .info:
             InfoTab(trip: trip)
         }
@@ -118,6 +122,6 @@ private struct TripContentView: View {
         .modelContainer(for: [Trip.self, TripDay.self, TransportInfo.self,
                                Accommodation.self, Destination.self,
                                TimelineItem.self, InfoItem.self, TaskItem.self,
-                               Attachment.self],
+                               Attachment.self, PackingItem.self, PackingTag.self],
                         inMemory: true)
 }

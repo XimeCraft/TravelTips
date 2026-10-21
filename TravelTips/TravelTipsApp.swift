@@ -16,16 +16,24 @@ struct TravelTipsApp: App {
             InfoItem.self,
             TaskItem.self,
             Attachment.self,
+            PackingItem.self,
+            PackingTag.self,
         ])
         let config = ModelConfiguration(schema: schema)
         do {
             container = try ModelContainer(for: schema, configurations: config)
         } catch {
-            // Dev convenience: wipe incompatible store on schema changes
-            let storeDir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-            let filenames = ["default.store", "default.store-shm", "default.store-wal"]
-            for name in filenames {
-                try? FileManager.default.removeItem(at: storeDir.appending(path: name))
+            // Schema mismatch fallback. NEVER delete the store — that destroys user data.
+            // Move it aside to a timestamped backup so it can always be recovered, then recreate.
+            let fm = FileManager.default
+            let storeDir = fm.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+            let backupDir = storeDir.appending(path: "StoreBackups/\(Int(Date().timeIntervalSince1970))")
+            try? fm.createDirectory(at: backupDir, withIntermediateDirectories: true)
+            for name in ["default.store", "default.store-shm", "default.store-wal"] {
+                let src = storeDir.appending(path: name)
+                if fm.fileExists(atPath: src.path) {
+                    try? fm.moveItem(at: src, to: backupDir.appending(path: name))
+                }
             }
             container = try! ModelContainer(for: schema, configurations: config)
         }

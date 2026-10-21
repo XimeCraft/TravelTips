@@ -11,6 +11,45 @@ func seedIfNeeded(context: ModelContext) {
     try? context.save()
 }
 
+// MARK: - Packing list seed (global, shared across trips)
+
+func seedPackingIfNeeded(context: ModelContext) {
+    let tagCount = (try? context.fetchCount(FetchDescriptor<PackingTag>())) ?? 0
+    let itemCount = (try? context.fetchCount(FetchDescriptor<PackingItem>())) ?? 0
+    guard tagCount == 0 && itemCount == 0 else { return }
+
+    let tags = ["衣物", "洗漱", "电子", "娱乐", "随身", "证件", "其他"]
+    for (i, name) in tags.enumerated() {
+        context.insert(PackingTag(name: name, sortOrder: i))
+    }
+
+    // (name, tag) — tags are a best-guess starting point; easy to re-tag in-app.
+    let items: [(String, String)] = [
+        ("短袖", "衣物"), ("卫衣", "衣物"), ("防晒衣", "衣物"),
+        ("外套 - JORDAN", "衣物"), ("外套 - 绿", "衣物"), ("外套 - 冲锋衣", "衣物"),
+        ("长裤", "衣物"), ("短裤", "衣物"), ("睡衣短裤", "衣物"),
+        ("内衣", "衣物"), ("内裤", "衣物"), ("袜子", "衣物"),
+        ("运动鞋", "衣物"), ("拖鞋", "衣物"), ("棒球帽", "衣物"), ("户外帽", "衣物"),
+        ("一次性内裤", "衣物"), ("一次性袜子", "衣物"),
+        ("游泳衣", "衣物"), ("水母衣", "衣物"), ("水母裤", "衣物"), ("沙滩裤", "衣物"),
+        ("浴巾", "洗漱"), ("洗漱包", "洗漱"), ("一次性浴巾", "洗漱"),
+        ("补水口罩", "洗漱"), ("口罩", "洗漱"), ("酒精湿巾", "洗漱"),
+        ("马桶垫", "洗漱"), ("消毒啫喱", "洗漱"), ("防晒霜", "洗漱"),
+        ("手表充电", "电子"), ("type-c", "电子"), ("接线头", "电子"),
+        ("充电宝", "电子"), ("转接头", "电子"), ("ipad", "电子"), ("mac", "电子"),
+        ("手机", "电子"), ("手表", "电子"), ("耳机", "电子"), ("手机防水袋", "电子"),
+        ("小龙", "娱乐"), ("书", "娱乐"), ("游泳镜", "娱乐"), ("游泳包", "娱乐"),
+        ("墨镜", "随身"), ("雨伞", "随身"), ("垃圾袋", "随身"), ("笔", "随身"),
+        ("水杯", "随身"), ("枕头", "随身"), ("行李箱", "随身"), ("背包", "随身"), ("小挎包", "随身"),
+        ("护照", "证件"), ("借记卡 - DBS", "证件"), ("信用卡 - 招行", "证件"), ("借记卡 - 招行", "证件"),
+        ("医药包", "其他"), ("液体创可贴", "其他"), ("布洛芬", "其他"), ("卫生巾", "其他"),
+    ]
+    for (i, pair) in items.enumerated() {
+        context.insert(PackingItem(name: pair.0, tag: pair.1, sortOrder: i))
+    }
+    try? context.save()
+}
+
 // MARK: - Egypt Trip 2026-03-12 → 03-23
 
 private func makeEgyptTrip() -> Trip {

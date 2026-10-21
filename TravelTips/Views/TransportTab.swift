@@ -197,6 +197,11 @@ private struct AddTransportSheet: View {
         _depTime = State(initialValue: editing?.departureTime ?? "")
         _arrTime = State(initialValue: editing?.arrivalTime ?? "")
         _detail  = State(initialValue: editing?.detail ?? "")
+
+        let initialDay = editing.flatMap { e in
+            trip.sortedDays.firstIndex { $0.transports.contains(where: { $0.id == e.id }) }
+        } ?? 0
+        _selectedDayIndex = State(initialValue: initialDay)
     }
 
     private var days: [TripDay] { trip.sortedDays }
@@ -206,29 +211,27 @@ private struct AddTransportSheet: View {
             ScrollView {
                 VStack(spacing: 0) {
                     HStack(spacing: 10) {
-                        if editing == nil {
-                            VStack(alignment: .leading, spacing: 5) {
-                                Text("Day")
-                                    .font(.system(size: 11, weight: .bold))
-                                    .foregroundColor(Theme.textSec)
-                                    .textCase(.uppercase)
-                                    .kerning(0.8)
-                                if !days.isEmpty {
-                                    Picker("Day", selection: $selectedDayIndex) {
-                                        ForEach(Array(days.enumerated()), id: \.offset) { i, day in
-                                            Text("Day \(i + 1), \(fmtDateShort(day.date))").tag(i)
-                                        }
+                        VStack(alignment: .leading, spacing: 5) {
+                            Text("Day")
+                                .font(.system(size: 11, weight: .bold))
+                                .foregroundColor(Theme.textSec)
+                                .textCase(.uppercase)
+                                .kerning(0.8)
+                            if !days.isEmpty {
+                                Picker("Day", selection: $selectedDayIndex) {
+                                    ForEach(Array(days.enumerated()), id: \.offset) { i, day in
+                                        Text("Day \(i + 1), \(fmtDateShort(day.date))").tag(i)
                                     }
-                                    .pickerStyle(.menu)
-                                    .padding(.horizontal, 10)
-                                    .padding(.vertical, 6)
-                                    .background(Color(.systemGray6))
-                                    .cornerRadius(10)
-                                    .tint(Theme.primary)
                                 }
+                                .pickerStyle(.menu)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 6)
+                                .background(Color(.systemGray6))
+                                .cornerRadius(10)
+                                .tint(Theme.primary)
                             }
-                            .frame(maxWidth: .infinity, alignment: .leading)
                         }
+                        .frame(maxWidth: .infinity, alignment: .leading)
 
                         VStack(alignment: .leading, spacing: 5) {
                             Text("Type")
@@ -270,6 +273,22 @@ private struct AddTransportSheet: View {
                             editing.departureTime = depTime
                             editing.arrivalTime   = arrTime
                             editing.detail        = detail
+
+                            // Move to the selected day if it changed.
+                            guard !days.isEmpty else { dismiss(); return }
+                            let targetDay = days[selectedDayIndex]
+                            let currentDay = trip.days.first { $0.transports.contains(where: { $0.id == editing.id }) }
+                            if let currentDay, currentDay.id != targetDay.id {
+                                currentDay.transports.removeAll { $0.id == editing.id }
+                                targetDay.transports.append(editing)
+                                // Move its linked timeline items to the new day too.
+                                for day in trip.days where day.id != targetDay.id {
+                                    let moving = day.timelineItems.filter { $0.linkedId == editing.id }
+                                    day.timelineItems.removeAll { $0.linkedId == editing.id }
+                                    targetDay.timelineItems.append(contentsOf: moving)
+                                }
+                            }
+
                             for day in trip.days {
                                 for item in day.timelineItems where item.linkedId == editing.id {
                                     item.title = "\(from) → \(to)"

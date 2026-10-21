@@ -1,0 +1,22 @@
+# macOS
+.DS_Store
+
+# Xcode
+DerivedData/
+build/
+*.xcuserstate
+xcuserdata/
+*.moved-aside
+*.xccheckout
+*.xcscmblueprint
+
+# Swift Package Manager
+.build/
+.swiftpm/
+
+# Claude Code local settings (shared settings.json is tracked)
+.claude/settings.local.json
+
+# Secrets (never commit API keys; see docs/MVP2-smart-import.md)
+Secrets.xcconfig
+*.secrets.json

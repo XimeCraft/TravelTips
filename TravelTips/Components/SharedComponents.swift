@@ -287,7 +287,7 @@ enum MainTab: String, CaseIterable {
 }
 
 enum TripTab: String, CaseIterable {
-    case overview, transport, accommodation, destinations, info
+    case overview, transport, accommodation, destinations, packing, info
 
     var icon: String {
         switch self {
@@ -295,6 +295,7 @@ enum TripTab: String, CaseIterable {
         case .transport:     return "airplane"
         case .accommodation: return "bed.double.fill"
         case .destinations:  return "mappin"
+        case .packing:       return "suitcase.fill"
         case .info:          return "info.circle.fill"
         }
     }
@@ -305,6 +306,7 @@ enum TripTab: String, CaseIterable {
         case .transport:     return "Transport"
         case .accommodation: return "Hotels"
         case .destinations:  return "Places"
+        case .packing:       return "Packing"
         case .info:          return "Info"
         }
     }
