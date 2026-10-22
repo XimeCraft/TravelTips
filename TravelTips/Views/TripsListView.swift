@@ -7,6 +7,8 @@ struct TripsListView: View {
 
     @Environment(\.modelContext) private var modelContext
     @State private var showAddSheet = false
+    @State private var tripToDelete: Trip? = nil
+    @State private var showDeleteConfirm = false
 
     var body: some View {
         ZStack(alignment: .topTrailing) {
@@ -37,7 +39,8 @@ struct TripsListView: View {
                     TripCard(trip: trip, onTap: { onSelect(trip) })
                         .swipeActions(edge: .trailing) {
                             Button(role: .destructive) {
-                                modelContext.delete(trip)
+                                tripToDelete = trip
+                                showDeleteConfirm = true
                             } label: {
                                 Label("Delete", systemImage: "trash")
                             }
@@ -57,6 +60,20 @@ struct TripsListView: View {
         .sheet(isPresented: $showAddSheet) {
             NewTripSheet()
                 .presentationDetents([.medium])
+        }
+        .confirmationDialog(
+            "Delete this trip?",
+            isPresented: $showDeleteConfirm,
+            titleVisibility: .visible,
+            presenting: tripToDelete
+        ) { trip in
+            Button("Delete \"\(trip.name)\"", role: .destructive) {
+                modelContext.delete(trip)
+                tripToDelete = nil
+            }
+            Button("Cancel", role: .cancel) { tripToDelete = nil }
+        } message: { trip in
+            Text("All days, transport, hotels, places and info for \"\(trip.name)\" will be removed. This cannot be undone.")
         }
     }
 }
