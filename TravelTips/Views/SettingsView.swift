@@ -102,6 +102,13 @@ struct SettingsView: View {
                     .padding(.vertical, 6)
                 }
 
+                #if DEBUG
+                SectionHeader(title: "Debug")
+                CardView {
+                    OnDeviceAIStatusView()
+                }
+                #endif
+
                 Spacer(minLength: 20)
             }
         }

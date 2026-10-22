@@ -93,8 +93,8 @@ struct ExtractedDocument: Codable {
 }
 
 struct TransportSegment: Codable {
-    var carrier: String?        // "CA", "China Eastern", "G 高铁"
-    var number: String?         // "CA981", "G1234"
+    var operatorName: String?   // "中国国际航空", "中国铁路12306"
+    var serviceNumber: String?  // "CA981", "G1234"（完整航班号 / 车次）
     var fromCode: String?       // IATA / 车站代码
     var fromName: String        // "Beijing Capital T3"
     var toCode: String?
@@ -126,7 +126,12 @@ struct ActivityInfo: Codable {
 }
 ```
 
-端侧用 Foundation Models 时，同一个结构加 `@Generable` 和 `@Guide(description:)`；云端用 Claude 时，把它转成 JSON Schema 放进 `output_config.format`。两边输出保证符合结构，不需要手写 JSON 容错。
+端侧用 Foundation Models 时，同一个结构加 `@Generable` 和 `@Guide(description:)`；端侧开源模型用 JSON Schema 约束解码；云端用 Claude 时，把它转成 JSON Schema 放进 `output_config.format`。三边输出保证符合结构，不需要手写 JSON 容错。
+
+Phase 0 评测得出的三条 schema 规则（见 6.7）：
+1. **所有字段 required 且允许 null**。小模型会直接省略可选字段。
+2. **日期和时间加 regex pattern**（`^\d{4}-\d{2}-\d{2}$`、`^\d{2}:\d{2}$`），否则会出现 `"202:03-16"` 这类串。
+3. **字段名自解释**。`carrier` / `number` 会被互换，`operatorName` / `serviceNumber` 不会。
 
 ---
 
@@ -158,7 +163,7 @@ struct ActivityInfo: Codable {
 
 | 候选 | 参数量 | 4-bit 大小 | 运行时 | 中文能力 | 备注 |
 |------|--------|-----------|--------|----------|------|
-| Apple Foundation Models | ~3B | 系统自带，0 下载 | iOS 26 `FoundationModels` | 支持简中 | 免费离线；4,096 token 上下文；只在 Apple Intelligence 机型可用（iPhone 15 Pro 及以后、16 / 17 全系）；**中国大陆机型可用性待确认** |
+| Apple Foundation Models | ~3B | 系统自带，0 下载 | iOS 26 `FoundationModels` | 支持简中 | 免费离线；4,096 token 上下文；只在 Apple Intelligence 机型可用（iPhone 15 Pro 及以后、16 / 17 全系）；**国行机型目前不可用**，见 6.6 |
 | Qwen3-4B-Instruct | 4B | ~2.5 GB | MLX Swift / llama.cpp | 强 | Apache 2.0。中文 OTA 确认单最可能表现好的开源选项 |
 | Qwen3-1.7B-Instruct | 1.7B | ~1.1 GB | 同上 | 中 | 4 GB 内存机型也能跑 |
 | Gemma 3n E2B / E4B | 2B / 4B 有效 | ~1.5 / 2.5 GB | llama.cpp / MLX | 中 | Google 专为移动端设计 |
@@ -204,11 +209,51 @@ struct ActivityInfo: Codable {
 
 ```
 目标用户主要在中国大陆？
-├─ 是 → 验证 Apple Intelligence 在大陆机型是否可用
-│        ├─ 可用 → Foundation Models 优先，Qwen3 via MLX 做机型兜底
-│        └─ 不可用 → Qwen3-4B via MLX 为主，1.7B 覆盖低内存机型
+├─ 是 → 国行机型目前不可用（见 6.6）→ Qwen3-4B via MLX 为主，1.7B 覆盖低内存机型
+│        └─ 12 月 iOS 27.3 后复查；若开发者接口开放，再把 Foundation Models 加为优先路径
 └─ 否 → Foundation Models 优先，BYOK Claude 做兜底
 ```
+
+### 6.6 Apple Intelligence 在中国大陆的现状（2026-10-21 查证）
+
+- **尚未上线。** 苹果官方支持页写明：在中国大陆购买的设备目前无法使用 Apple Intelligence；在其他地区购买的设备，如果人在大陆且 Apple 账户地区也是大陆，同样不可用。
+- **预计 2026 年 12 月随 iOS 27.3 上线**（彭博社 / SCMP 报道，苹果未官方确认）。7 月通过生成式 AI 备案，9 月 29 日取得上线许可，模型由阿里 Qwen 供货。
+- **首批功能很窄**：写作工具、通知摘要、照片清理等，不含新 Siri 和 Image Playground。**没有任何报道提到第三方开发者的 Foundation Models 框架会同步开放。**
+- **对本项目的影响**：如果目标用户是国行 iPhone，Foundation Models 路线在 12 月前确定不可用，12 月后也要再验证。决策树里"大陆为主"这一支默认走 Qwen3 via MLX。
+- **复查时间**：iOS 27.3 发布后，在国行机上重跑 Settings → Debug → On-device model 检测。
+
+### 6.7 Phase 0 初步结果（2026-10-21）
+
+环境：Mac M1 16 GB，Ollama 0.33，temperature 0，thinking 关闭，JSON Schema 约束输出。样例是 5 份模拟确认单（携程往返机票、Booking 酒店、12306、飞猪酒店乱排版、Klook 活动），放在 `tools/eval/samples/`。
+
+| 模型 | 关键字段正确率 | 每份延迟 | 结论 |
+|------|---------------|---------|------|
+| Qwen3-4B | 第一轮 87%，schema 修正后三轮 90–95% | 10–21 s | **可作主力** |
+| Qwen3-1.7B | 约 75%：漏掉返程 +1 跨夜、飞猪酒店 `stay` 为空、编造三字码 | 5–14 s | 只能作低内存机型降级，确认页要更严 |
+
+4B 做对的难点：往返拆两段、`15:40 +1` 推成次日、从机场名推出 PEK / CAI、无年份日期靠上下文补对年、乱排版的飞猪单完整抽出。
+
+发现的问题和对策：
+
+| 问题 | 出现情况 | 对策 | 状态 |
+|------|---------|------|------|
+| 可选字段被省略（航班号、地址整个没输出） | 第一轮 3/5 | schema 全部 required + null | 已改，有效 |
+| 无年份日期猜成 2024 | 飞猪单 | 上下文给行程日期范围 | 已改，有效 |
+| `carrier` / `number` 互换 | 第二轮 | 改名 `operatorName` / `serviceNumber` | 已改，有效 |
+| 数字串偶发错位：`202:03-16`、`2021-03-16`、订单号中插冒号 | 每轮 1–2 处，固定在第一个日期或长数字串 | 日期加 regex 保证格式；**mapper 必须做范围校验**（不在行程 ±3 天内标红）；Phase 1 在 MLX 上复测是否为 Ollama 采样器特有 | 待验证 |
+| 退房日被填成上下文里的行程结束日 | 第三轮 Booking 单 | 逻辑校验：退房 > 入住，晚数与文本一致 | 待实现 |
+| hotel / activity 的 `segments` 塞垃圾 | 持续 | mapper 按 kind 忽略 | 无害 |
+| `passengerNames` 出现 "Adult 1" 占位符 | 持续 | App 不用这个字段 | 无害 |
+
+**结论**：4B 级别的开源模型配约束解码和确认页，能完成这个功能。剩余错误全部是"日期值不合理"这一类，正好是范围校验能抓住的。
+
+复现：
+```bash
+ollama pull qwen3:4b
+python3 tools/eval/extract_eval.py --model qwen3:4b
+```
+
+下一步（P0 剩余）：换成 20–30 份真实 PDF、写金标准、脚本自动打分；在 MLX Swift 真机复测 4B 的延迟和数字错位。
 
 ---
 
@@ -244,9 +289,9 @@ struct ActivityInfo: Codable {
 |----|------|------|
 | P0-1 | 攒 20–30 份真实 PDF 语料并脱敏 | `docs/eval-corpus/`（gitignore） |
 | P0-2 | 手写金标准 JSON | 同上 |
-| P0-3 | Mac 评测脚本：PDFKit 抽文本 + 清洗 | `tools/eval/` |
-| P0-4 | 跑 Foundation Models（macOS 26 可直接跑）、Qwen3-4B、Qwen3-1.7B、Gemma 3n、Haiku 5.5 | 准确率对比表 |
-| P0-5 | 确认 Apple Intelligence 大陆可用性 | 一行结论 |
+| P0-3 | Mac 评测脚本 | `tools/eval/extract_eval.py` 已有（Ollama 版）；还缺 PDFKit 抽文本和自动打分 |
+| P0-4 | 跑 Qwen3-4B、Qwen3-1.7B（已跑，见 6.7）、Gemma 3n、Haiku 5.5；Foundation Models 需 macOS 26 | 准确率对比表 |
+| P0-5 | ~~确认 Apple Intelligence 大陆可用性~~ 已查（2026-10-21），见 6.6；12 月后复查开发者接口是否开放 | 一行结论 |
 | P0-6 | 决策备忘：选哪个后端、机型门槛、是否接受模型下载 | 写回本文档第 6.5 节 |
 
 ### Phase 1 · 抽取原型（1–2 周）
@@ -332,4 +377,4 @@ struct ActivityInfo: Codable {
 - 关键字段在确认页正确率 ≥ 85%，错误字段能在确认页改正
 - 导入后 Transport / Hotels / Daily 三处数据一致，linkedId 级联删除正常
 - 原 PDF 出现在对应条目的附件里
-- 单份 PDF 从选中到草稿出现 ≤ 10 秒（iPhone 15 Pro 或同档）
+- 单份 PDF 从选中到草稿出现 ≤ 30 秒（iPhone 15 Pro 或同档；M1 Mac 上实测 10–21 秒），批量导入在后台跑并显示进度
