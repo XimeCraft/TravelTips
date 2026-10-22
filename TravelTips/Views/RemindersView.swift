@@ -44,6 +44,17 @@ struct RemindersView: View {
                         .listRowSeparator(.hidden)
                 }
 
+                if tripReminders.isEmpty {
+                    Text("No upcoming trips")
+                        .font(.system(size: 13))
+                        .foregroundColor(Theme.textTer)
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 12)
+                        .listRowInsets(EdgeInsets())
+                        .listRowBackground(Theme.bg)
+                        .listRowSeparator(.hidden)
+                }
+
                 // MARK: My Tasks (manual)
 
                 SectionHeader(title: "My Tasks")
@@ -110,11 +121,22 @@ struct RemindersView: View {
     }
 
     private var tripReminders: [TripReminderItem] {
-        trips.map { trip in
-            let d = trip.daysLeft
+        trips.compactMap { trip in
+            let toStart = trip.daysLeft
+            let toEnd = daysUntil(trip.endDate)
+            guard toEnd >= 0 else { return nil }          // ended trips are not reminders
+
+            let title: String
+            if toStart > 1 {
+                title = "\(trip.name) starts in \(toStart) days"
+            } else if toStart == 1 {
+                title = "\(trip.name) starts tomorrow"
+            } else {
+                title = "\(trip.name) is now!"
+            }
             return TripReminderItem(
                 icon: trip.emoji,
-                title: "\(trip.name) \(d > 0 ? "starts in \(d) days" : "is now!")",
+                title: title,
                 subtitle: "\(fmtDate(trip.startDate)) – \(fmtDate(trip.endDate))"
             )
         }
