@@ -86,10 +86,10 @@ struct SettingsView: View {
                             Text("🧳")
                                 .font(.system(size: 24))
                         }
-                        Text("TripCard")
+                        Text(appName)
                             .font(.system(size: 17, weight: .bold))
                             .foregroundColor(Theme.textPrimary)
-                        Text("Version 1.0.0")
+                        Text(appVersion)
                             .font(.system(size: 12))
                             .foregroundColor(Theme.textSec)
                         Text("Your offline travel companion.\nOrganize itineraries, store tickets & documents.")
@@ -112,6 +112,18 @@ struct SettingsView: View {
                 Spacer(minLength: 20)
             }
         }
+    }
+
+    private var appName: String {
+        (Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String)
+            ?? (Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String)
+            ?? "TravelTips"
+    }
+
+    private var appVersion: String {
+        let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "?"
+        let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "?"
+        return "Version \(version) (\(build))"
     }
 
     private func requestNotificationPermission() {
