@@ -17,12 +17,12 @@
 
 | ID | 事项 | 工作量 | 涉及文件 | 验收 |
 |----|------|--------|----------|------|
-| A1 | 删除行程二次确认 | 20 min | `Views/TripsListView.swift` | 滑动删除弹 confirmationDialog，确认后才级联删除 |
-| A2 | About 页版本号从 Bundle 读取，产品名统一 | 20 min | `Views/SettingsView.swift` | 显示 `CFBundleShortVersionString` + build；先决定叫 TravelTips 还是 TripCard |
-| A3 | 加 `NSCameraUsageDescription` | 10 min | `project.pbxproj` 的 `INFOPLIST_KEY_NSCameraUsageDescription` | 附件里点拍照不再闪退 |
-| A4 | Todo 页行程提醒对已结束行程显示错误 | 15 min | `Views/RemindersView.swift` | 已结束的行程不再显示 "is now!"，改为隐藏或 "ended" |
-| A5 | 只支持 iPhone 竖屏 | 10 min | `project.pbxproj`：`TARGETED_DEVICE_FAMILY = 1`，方向只留 Portrait | 横屏和 iPad 不再出现错位的自定义 TabBar |
-| A6 | 行程列表空状态 | 30 min | `Views/TripsListView.swift` | 没有行程时显示引导文案和一个"创建行程"按钮 |
+| A1 | ✅ 删除行程二次确认 | 20 min | `Views/TripsListView.swift` | 滑动删除弹 confirmationDialog，确认后才级联删除 |
+| A2 | ✅ About 页版本号从 Bundle 读取，产品名统一 | 20 min | `Views/SettingsView.swift` | 显示 `CFBundleShortVersionString` + build；先决定叫 TravelTips 还是 TripCard |
+| A3 | ✅ 加 `NSCameraUsageDescription` | 10 min | `project.pbxproj` 的 `INFOPLIST_KEY_NSCameraUsageDescription` | 附件里点拍照不再闪退 |
+| A4 | ✅ Todo 页行程提醒对已结束行程显示错误 | 15 min | `Views/RemindersView.swift` | 已结束的行程不再显示 "is now!"，改为隐藏或 "ended" |
+| A5 | ✅ 只支持 iPhone 竖屏 | 10 min | `project.pbxproj`：`TARGETED_DEVICE_FAMILY = 1`，方向只留 Portrait | 横屏和 iPad 不再出现错位的自定义 TabBar |
+| A6 | ✅ 行程列表空状态 | 30 min | `Views/TripsListView.swift` | 没有行程时显示引导文案和一个"创建行程"按钮 |
 
 ## B 组：半天级别，不改数据模型
 
