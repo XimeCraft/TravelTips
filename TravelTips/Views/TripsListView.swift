@@ -35,6 +35,39 @@ struct TripsListView: View {
                     .listRowBackground(Theme.bg)
                     .listRowSeparator(.hidden)
 
+                if trips.isEmpty {
+                    CardView {
+                        VStack(spacing: 10) {
+                            Text("🧳")
+                                .font(.system(size: 40))
+                            Text("No trips yet")
+                                .font(.system(size: 17, weight: .bold))
+                                .foregroundColor(Theme.textPrimary)
+                            Text("Create your first trip to start planning.")
+                                .font(.system(size: 13))
+                                .foregroundColor(Theme.textSec)
+                                .multilineTextAlignment(.center)
+                            Button {
+                                showAddSheet = true
+                            } label: {
+                                Text("Create Trip")
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .padding(.horizontal, 18)
+                                    .padding(.vertical, 9)
+                                    .background(Theme.primary)
+                                    .foregroundColor(.white)
+                                    .cornerRadius(10)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                    }
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Theme.bg)
+                    .listRowSeparator(.hidden)
+                }
+
                 ForEach(trips) { trip in
                     TripCard(trip: trip, onTap: { onSelect(trip) })
                         .swipeActions(edge: .trailing) {
