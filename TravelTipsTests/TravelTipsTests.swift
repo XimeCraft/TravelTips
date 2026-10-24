@@ -85,3 +85,35 @@ struct AttachmentStoreTests {
         #expect(AttachmentStore.ownerIds(in: trip) == [t.id, d.id, acc.id, info.id])
     }
 }
+
+struct TimeParsingTests {
+
+    @Test(arguments: [
+        ("08:00", 480), ("8:05", 485), ("0805", 485), ("23:59", 1439), ("00:00", 0),
+        ("08：30", 510), (" 09:15 ", 555), ("10:30-12:00", 630), ("12:30-13:00", 750),
+    ])
+    func parsesValidTimes(input: String, minutes: Int) {
+        #expect(parseHHmm(input) == minutes)
+    }
+
+    @Test(arguments: ["", "--:--", "All Day", "24:00", "12:60", "abc", "9"])
+    func rejectsNonTimes(input: String) {
+        #expect(parseHHmm(input) == nil)
+    }
+
+    @Test func nilInputIsNil() {
+        #expect(parseHHmm(nil) == nil)
+    }
+
+    @Test func exactRejectsTrailingText() {
+        #expect(exactHHmm("09:00") == 540)
+        #expect(exactHHmm("09:00 sharp") == nil)
+        #expect(exactHHmm("10:30-12:00") == nil)
+    }
+
+    @Test func formatsZeroPadded() {
+        #expect(formatHHmm(0) == "00:00")
+        #expect(formatHHmm(485) == "08:05")
+        #expect(formatHHmm(1439) == "23:59")
+    }
+}

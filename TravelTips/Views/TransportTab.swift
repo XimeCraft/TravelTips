@@ -261,8 +261,8 @@ private struct AddTransportSheet: View {
                         SheetField(label: "To", text: $to, placeholder: "Arrival")
                     }
                     HStack(spacing: 10) {
-                        SheetField(label: "Dep. Time", text: $depTime, placeholder: "08:00")
-                        SheetField(label: "Arr. Time", text: $arrTime, placeholder: "10:30")
+                        TimeField(label: "Dep. Time", text: $depTime, defaultMinutes: 8 * 60)
+                        TimeField(label: "Arr. Time", text: $arrTime, defaultMinutes: parseHHmm(depTime).map { min($0 + 120, 23 * 60 + 59) } ?? 10 * 60)
                     }
                     SheetField(label: "Detail", text: $detail, placeholder: "Flight number, etc.")
 

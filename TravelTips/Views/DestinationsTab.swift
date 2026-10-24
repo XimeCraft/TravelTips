@@ -227,10 +227,8 @@ private struct AddPlaceSheet: View {
                     .padding(.bottom, 4)
 
                     SheetField(label: "Address", text: $address, placeholder: "Full address")
-                    HStack(spacing: 10) {
-                        SheetField(label: "Time", text: $time, placeholder: "08:00-12:00")
-                        SheetField(label: "Ticket Price", text: $ticketPrice, placeholder: "540 EGP")
-                    }
+                    TimeRangeField(label: "Time", text: $time)
+                    SheetField(label: "Ticket Price", text: $ticketPrice, placeholder: "540 EGP")
                     SheetField(label: "Notes", text: $notes, placeholder: "Tips...", multiline: true)
 
                     SheetSaveButton(label: "Save") {

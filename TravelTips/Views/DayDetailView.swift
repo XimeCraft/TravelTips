@@ -389,7 +389,7 @@ private struct AddTimelineItemSheet: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 0) {
-                    SheetField(label: "Time", text: $time, placeholder: "e.g. 08:00")
+                    TimeField(label: "Time", text: $time)
                     SheetField(label: "Title", text: $title, placeholder: "What to do")
                     SheetField(label: "Address", text: $address, placeholder: "Location address")
 
