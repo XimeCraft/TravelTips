@@ -31,10 +31,10 @@ struct OverviewTab: View {
                             .foregroundColor(Theme.textSec)
                         Text("\(trip.totalDays) days")
                             .font(.system(size: 12, weight: .bold))
-                            .foregroundColor(Theme.primary)
+                            .foregroundColor(trip.color)
                             .padding(.horizontal, 8)
                             .padding(.vertical, 2)
-                            .background(Theme.primary.opacity(0.15))
+                            .background(trip.color.opacity(0.15))
                             .cornerRadius(8)
                     }
                 }
@@ -86,10 +86,10 @@ private struct DayCard: View {
                 // Day badge
                 ZStack {
                     RoundedRectangle(cornerRadius: 12)
-                        .fill(isToday ? accent : Theme.primaryMuted)
+                        .fill(isToday ? accent : accent.opacity(0.19))
                     Text("D\(dayNumber)")
                         .font(.system(size: 15, weight: .heavy))
-                        .foregroundColor(isToday ? .white : Theme.primary)
+                        .foregroundColor(isToday ? .white : accent)
                 }
                 .frame(width: 44, height: 44)
                 .flexibleFrame(maxWidth: 44)

@@ -153,6 +153,7 @@ struct SectionHeader: View {
 
 struct BackButton: View {
     let label: String
+    var color: Color = Theme.primary
     let action: () -> Void
 
     var body: some View {
@@ -163,7 +164,7 @@ struct BackButton: View {
                 Text(label)
                     .font(.system(size: 15, weight: .medium))
             }
-            .foregroundColor(Theme.primary)
+            .foregroundColor(color)
             .padding(.leading, 20)
             .padding(.top, 16)
             .padding(.bottom, 8)
@@ -321,6 +322,8 @@ enum TripTab: String, CaseIterable {
 
 struct AppTabBar: View {
     let inTrip: Bool
+    /// Selected-tab color inside a trip (the trip's own color).
+    var tripAccent: Color = Theme.primary
     @Binding var mainTab: MainTab
     @Binding var tripTab: TripTab
     let onTripTabChange: () -> Void
@@ -334,7 +337,8 @@ struct AppTabBar: View {
                         tabItem(
                             icon: tab.icon,
                             label: tab.label,
-                            isActive: tripTab == tab
+                            isActive: tripTab == tab,
+                            accent: tripAccent
                         ) {
                             tripTab = tab
                             onTripTabChange()
@@ -359,7 +363,8 @@ struct AppTabBar: View {
         .animation(.easeInOut(duration: 0.2), value: inTrip)
     }
 
-    private func tabItem(icon: String, label: String, isActive: Bool, action: @escaping () -> Void) -> some View {
+    private func tabItem(icon: String, label: String, isActive: Bool,
+                         accent: Color = Theme.primary, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             VStack(spacing: 3) {
                 Image(systemName: icon)
@@ -368,7 +373,7 @@ struct AppTabBar: View {
                     .font(.system(size: 10, weight: .semibold))
                     .kerning(0.3)
             }
-            .foregroundColor(isActive ? Theme.primary : Theme.textTer)
+            .foregroundColor(isActive ? accent : Theme.textTer)
             .frame(maxWidth: .infinity)
             .animation(.easeInOut(duration: 0.2), value: isActive)
         }

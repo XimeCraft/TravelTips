@@ -24,7 +24,7 @@ struct DayDetailView: View {
         VStack(spacing: 0) {
             // ── Header ───────────────────────────────────────────────────────
             HStack(alignment: .top, spacing: 0) {
-                BackButton(label: "Overview", action: onBack)
+                BackButton(label: "Overview", color: trip.color, action: onBack)
                 Spacer()
                 AddButton { showAddSheet = true }
                     .padding(.top, 18)
