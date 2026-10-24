@@ -20,3 +20,6 @@ xcuserdata/
 # Secrets (never commit API keys; see docs/MVP2-smart-import.md)
 Secrets.xcconfig
 *.secrets.json
+
+# Device container downloads (personal data, never commit)
+*.xcappdata/
