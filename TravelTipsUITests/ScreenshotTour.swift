@@ -35,5 +35,24 @@ final class ScreenshotTour: XCTestCase {
         // Let the scroll-to-today animation finish.
         _ = app.staticTexts["TODAY"].firstMatch.waitForExistence(timeout: 3)
         snap(app, "02-overview")
+
+        // Settings: turn notifications on and accept the system prompt.
+        app.buttons.matching(NSPredicate(format: "label CONTAINS 'My Trips'")).firstMatch.tap()
+        let settingsTab = app.buttons["Settings"].firstMatch
+        XCTAssertTrue(settingsTab.waitForExistence(timeout: 5))
+        settingsTab.tap()
+        let toggle = app.switches.firstMatch
+        XCTAssertTrue(toggle.waitForExistence(timeout: 5))
+        if toggle.value as? String == "0" {
+            toggle.switches.firstMatch.exists ? toggle.switches.firstMatch.tap() : toggle.tap()
+            let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
+            let allow = springboard.buttons["Allow"]
+            if allow.waitForExistence(timeout: 5) { allow.tap() }
+        }
+        app.swipeUp()
+        let refresh = app.buttons["Refresh"].firstMatch
+        if refresh.waitForExistence(timeout: 3) { refresh.tap() }
+        _ = app.staticTexts["pendingNotificationCount"].waitForExistence(timeout: 3)
+        snap(app, "03-settings-notifications")
     }
 }

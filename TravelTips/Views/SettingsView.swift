@@ -1,9 +1,13 @@
 import SwiftUI
+import SwiftData
+import UIKit
 import UserNotifications
 
 struct SettingsView: View {
     @AppStorage("appLanguage") private var language: String = "en"
-    @AppStorage("notificationsEnabled") private var notificationsEnabled: Bool = true
+    @AppStorage(NotificationScheduler.enabledKey) private var notificationsEnabled: Bool = false
+    @Environment(\.modelContext) private var modelContext
+    @State private var showPermissionDenied = false
 
     var body: some View {
         ScrollView {
@@ -58,15 +62,20 @@ struct SettingsView: View {
                             .font(.system(size: 20))
                             .foregroundColor(Theme.primary)
                             .frame(width: 26)
-                        Text("Notifications")
-                            .font(.system(size: 15, weight: .medium))
-                            .foregroundColor(Theme.textPrimary)
-                            .frame(maxWidth: .infinity, alignment: .leading)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Notifications")
+                                .font(.system(size: 15, weight: .medium))
+                                .foregroundColor(Theme.textPrimary)
+                            Text("The evening before a trip, and each morning's plan during it")
+                                .font(.system(size: 11))
+                                .foregroundColor(Theme.textSec)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
                         Toggle("", isOn: $notificationsEnabled)
                             .labelsHidden()
                             .tint(Theme.primary)
                             .onChange(of: notificationsEnabled) { _, enabled in
-                                if enabled { requestNotificationPermission() }
+                                Task { await notificationsToggled(enabled) }
                             }
                     }
                 }
@@ -107,10 +116,24 @@ struct SettingsView: View {
                 CardView {
                     OnDeviceAIStatusView()
                 }
+                CardView {
+                    PendingNotificationsDebugView()
+                }
                 #endif
 
                 Spacer(minLength: 20)
             }
+        }
+        .task { await syncWithSystemPermission() }
+        .alert("Notifications are off", isPresented: $showPermissionDenied) {
+            Button("Open Settings") {
+                if let url = URL(string: UIApplication.openNotificationSettingsURLString) {
+                    UIApplication.shared.open(url)
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Allow notifications for TravelTips in iOS Settings to get trip reminders.")
         }
     }
 
@@ -126,7 +149,23 @@ struct SettingsView: View {
         return "Version \(version) (\(build))"
     }
 
-    private func requestNotificationPermission() {
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { _, _ in }
+    private func notificationsToggled(_ enabled: Bool) async {
+        guard enabled else {
+            await NotificationScheduler.clearTripNotifications()
+            return
+        }
+        if await NotificationScheduler.requestPermission() {
+            await NotificationScheduler.reschedule(context: modelContext)
+        } else {
+            notificationsEnabled = false
+            showPermissionDenied = true
+        }
+    }
+
+    /// Keeps the toggle honest if permission was revoked in iOS Settings.
+    private func syncWithSystemPermission() async {
+        guard notificationsEnabled else { return }
+        let status = await UNUserNotificationCenter.current().notificationSettings().authorizationStatus
+        if status == .denied { notificationsEnabled = false }
     }
 }

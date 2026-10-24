@@ -263,3 +263,68 @@ struct TodayIndexTests {
         #expect(t.todayIndex(now: d(24)) == nil)
     }
 }
+
+@MainActor
+struct NotificationPlannerTests {
+    let cal = Calendar.current
+    func at(_ day: Int, _ hour: Int, month: Int = 11) -> Date {
+        cal.date(from: DateComponents(year: 2026, month: month, day: day, hour: hour))!
+    }
+
+    func makeTrip(_ ctx: ModelContext, name: String = "Spain", from: Int = 10, days: Int = 3) -> Trip {
+        let t = Trip(name: name, emoji: "🇪🇸", startDate: at(from, 0), endDate: at(from + days - 1, 0))
+        ctx.insert(t)
+        for (i, date) in TripDates.dayStarts(from: t.startDate, to: t.endDate).enumerated() {
+            t.days.append(TripDay(date: date, city: i == 0 ? "Barcelona" : "", summary: "", sortOrder: i))
+        }
+        return t
+    }
+
+    @Test func beforeTripPlansEveAndEveryMorning() throws {
+        let trip = makeTrip(try makeContext())
+        let plan = NotificationPlanner.plan(for: [trip], now: at(1, 12))
+
+        #expect(plan.count == 4)
+        #expect(plan[0].title == "🇪🇸 Spain starts tomorrow")
+        #expect(plan[0].fire.day == 9 && plan[0].fire.hour == 20)
+        #expect(plan[1].title == "🇪🇸 Day 1 · Barcelona")
+        #expect(plan[1].fire.day == 10 && plan[1].fire.hour == 8)
+        #expect(plan[2].title == "🇪🇸 Day 2 of Spain")
+        #expect(plan[3].fire.day == 12)
+        #expect(Set(plan.map(\.id)).count == 4)
+        #expect(plan.allSatisfy { $0.id.hasPrefix(NotificationPlanner.idPrefix) })
+    }
+
+    @Test func pastTimesAreSkipped() throws {
+        let trip = makeTrip(try makeContext())
+        // Day 2, 09:00: eve, day 1 and day 2 mornings are past.
+        let plan = NotificationPlanner.plan(for: [trip], now: at(11, 9))
+        #expect(plan.map { $0.fire.day } == [12])
+        #expect(NotificationPlanner.plan(for: [trip], now: at(20, 9)).isEmpty)
+    }
+
+    @Test func cappedAndNearestFirst() throws {
+        let ctx = try makeContext()
+        let long = makeTrip(ctx, name: "Long", from: 1, days: 30)
+        let soon = makeTrip(ctx, name: "Soon", from: 1, days: 30)
+        let plan = NotificationPlanner.plan(for: [long, soon], now: at(1, 0, month: 10))
+        #expect(plan.count == NotificationPlanner.maxPending)
+        // Sorted by fire time.
+        let dates = plan.compactMap { cal.date(from: $0.fire) }
+        #expect(dates == dates.sorted())
+    }
+
+    @Test func summaryListsTimedItemsFirstAndCountsTheRest() throws {
+        let ctx = try makeContext()
+        let day = TripDay(date: .now, city: "", summary: "Rest day", sortOrder: 0)
+        ctx.insert(day)
+        #expect(NotificationPlanner.summary(of: day) == "Rest day")
+
+        for (i, (time, title)) in [("--:--", "Check-out"), ("14:30", "Museum"), ("08:00", "Flight"),
+                                   ("10:30-12:00", "Tour"), ("18:00", "Dinner")].enumerated() {
+            day.timelineItems.append(TimelineItem(time: time, title: title, sortOrder: i))
+        }
+        #expect(NotificationPlanner.summary(of: day)
+                == "08:00 Flight · 10:30-12:00 Tour · 14:30 Museum · 18:00 Dinner · +1 more")
+    }
+}

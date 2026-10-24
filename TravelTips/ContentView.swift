@@ -3,6 +3,7 @@ import SwiftData
 
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.scenePhase) private var scenePhase
     @Query(sort: \Trip.startKey) private var trips: [Trip]   // "yyyy-MM-dd" sorts chronologically
 
     // Navigation state
@@ -93,6 +94,13 @@ struct ContentView: View {
             Button("OK", role: .cancel) { recoveryNotice = "" }
         } message: {
             Text(recoveryNotice)
+        }
+        .onChange(of: scenePhase) { _, phase in
+            // Rebuild trip reminders when the app opens and when it is left, so
+            // edits made in between are reflected.
+            if phase == .active || phase == .background {
+                Task { await NotificationScheduler.reschedule(context: modelContext) }
+            }
         }
         .onAppear {
             // Sample data is for development only; Release starts empty (see A6).
