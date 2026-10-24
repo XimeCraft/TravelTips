@@ -88,6 +88,9 @@ struct AccommodationTab: View {
     }
 
     private func deleteStay(_ stay: HotelStay) {
+        if let lid = stay.linkedId {
+            AttachmentStore.deleteAll(linkedTo: [lid], context: modelContext)
+        }
         for day in trip.days {
             if day.accommodation?.name == stay.name {
                 if let acc = day.accommodation { modelContext.delete(acc) }
@@ -302,6 +305,11 @@ private struct AddHotelSheet: View {
                                 if firstAccId == nil { firstAccId = acc.id }
                             }
                             current = cal.date(byAdding: .day, value: 1, to: current) ?? checkOut
+                        }
+
+                        // Nights were rebuilt with new ids; keep the stay's attachments.
+                        if let oldId = editing?.linkedId, let newId = firstAccId {
+                            AttachmentStore.relink(from: oldId, to: newId, context: modelContext)
                         }
 
                         if let lid = firstAccId,

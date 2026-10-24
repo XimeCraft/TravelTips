@@ -76,6 +76,7 @@ struct TransportTab: View {
     }
 
     private func deleteTransport(_ transport: TransportInfo, from day: TripDay) {
+        AttachmentStore.deleteAll(linkedTo: [transport.id], context: modelContext)
         for d in trip.days {
             d.timelineItems.removeAll { $0.linkedId == transport.id }
         }

@@ -80,6 +80,7 @@ struct DestinationsTab: View {
     }
 
     private func deleteDestination(_ dest: Destination, from day: TripDay) {
+        AttachmentStore.deleteAll(linkedTo: [dest.id], context: modelContext)
         for d in trip.days {
             d.timelineItems.removeAll { $0.linkedId == dest.id }
         }

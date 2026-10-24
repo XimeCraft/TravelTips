@@ -202,7 +202,7 @@ struct AttachmentSectionView: View {
                     att: att,
                     onTap: { previewURL = localURL(for: att.localPath) },
                     onDelete: {
-                        try? FileManager.default.removeItem(at: localURL(for: att.localPath))
+                        AttachmentStore.deleteFile(for: att)
                         modelContext.delete(att)
                     }
                 )

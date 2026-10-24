@@ -101,6 +101,7 @@ struct TripsListView: View {
             presenting: tripToDelete
         ) { trip in
             Button("Delete \"\(trip.name)\"", role: .destructive) {
+                AttachmentStore.deleteAll(linkedTo: AttachmentStore.ownerIds(in: trip), context: modelContext)
                 modelContext.delete(trip)
                 tripToDelete = nil
             }

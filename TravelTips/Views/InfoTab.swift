@@ -36,6 +36,7 @@ struct InfoTab: View {
                         Button(role: .destructive) {
                             if let idx = trip.infoItems.firstIndex(where: { $0.id == item.id }) {
                                 let it = trip.infoItems[idx]
+                                AttachmentStore.deleteAll(linkedTo: [it.id], context: modelContext)
                                 trip.infoItems.remove(at: idx)
                                 modelContext.delete(it)
                             }
