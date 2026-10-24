@@ -323,6 +323,5 @@ private func makeEgyptTrip() -> Trip {
 private func date(_ string: String) -> Date {
     let f = DateFormatter()
     f.dateFormat = "yyyy-MM-dd"
-    f.timeZone = TimeZone(identifier: "UTC")
     return f.date(from: string) ?? Date()
 }

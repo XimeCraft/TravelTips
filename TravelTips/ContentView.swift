@@ -3,13 +3,14 @@ import SwiftData
 
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
-    @Query(sort: \Trip.startDate) private var trips: [Trip]
+    @Query(sort: \Trip.startKey) private var trips: [Trip]   // "yyyy-MM-dd" sorts chronologically
 
     // Navigation state
     @State private var mainTab: MainTab = .trips
     @State private var selectedTrip: Trip? = nil
     @State private var tripTab: TripTab = .overview
     @State private var selectedDayIndex: Int? = nil
+    @AppStorage(StoreSetup.recoveryNoticeKey) private var recoveryNotice: String = ""
 
     private var inTrip: Bool { selectedTrip != nil }
 
@@ -85,6 +86,14 @@ struct ContentView: View {
         }
         .ignoresSafeArea(edges: .bottom)
         .preferredColorScheme(.light)   // app is designed light-only; lock it to avoid dark-on-dark
+        .alert("Data Recovery", isPresented: Binding(
+            get: { !recoveryNotice.isEmpty },
+            set: { if !$0 { recoveryNotice = "" } }
+        )) {
+            Button("OK", role: .cancel) { recoveryNotice = "" }
+        } message: {
+            Text(recoveryNotice)
+        }
         .onAppear {
             // Sample data is for development only; Release starts empty (see A6).
             #if DEBUG
