@@ -41,6 +41,15 @@ final class ScreenshotTour: XCTestCase {
         _ = app.staticTexts[L("TODAY", "今天")].firstMatch.waitForExistence(timeout: 3)
         snap(app, "02-overview")
 
+        // Trip form with the color palette.
+        let edit = app.buttons[L("Edit trip", "编辑行程")].firstMatch
+        if edit.waitForExistence(timeout: 3) {
+            edit.tap()
+            _ = app.navigationBars.firstMatch.waitForExistence(timeout: 3)
+            snap(app, "02b-edit-trip")
+            app.buttons[L("Cancel", "取消")].firstMatch.tap()
+        }
+
         // Settings: turn notifications on and accept the system prompt.
         app.buttons.matching(NSPredicate(format: "label CONTAINS %@", L("My Trips", "我的行程"))).firstMatch.tap()
         let settingsTab = app.buttons[L("Settings", "设置")].firstMatch

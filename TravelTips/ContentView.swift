@@ -33,7 +33,7 @@ struct ContentView: View {
                     } else {
                         // Trip with 5-tab content
                         VStack(spacing: 0) {
-                            BackButton(label: "My Trips", color: trip.color) {
+                            BackButton(label: "My Trips", color: trip.tint) {
                                 withAnimation(.easeInOut(duration: 0.25)) {
                                     selectedTrip = nil
                                     selectedDayIndex = nil
@@ -80,7 +80,7 @@ struct ContentView: View {
             // ── Tab bar ─────────────────────────────────────────────────────
             AppTabBar(
                 inTrip: inTrip,
-                tripAccent: selectedTrip?.color ?? Theme.primary,
+                tripAccent: selectedTrip?.tint ?? Theme.primary,
                 mainTab: $mainTab,
                 tripTab: $tripTab,
                 onTripTabChange: { selectedDayIndex = nil }

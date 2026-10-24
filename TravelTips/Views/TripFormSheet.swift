@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 import SwiftData
 
 // MARK: - Trip form (create + edit)
@@ -6,8 +7,66 @@ import SwiftData
 /// Preset trip colors. The first one is the app's primary green.
 let tripColorPresets = ["076C44", "2196F3", "9C27B0", "E65100", "C62828", "00838F", "5D4037", "37474F"]
 
+/// Colors the user picked with the custom picker, most recent first.
+enum CustomTripColors {
+    static let key = "customTripColors"
+    static let limit = 8
+
+    static func load(_ raw: String) -> [String] {
+        raw.split(separator: ",").map(String.init).filter { $0.count == 6 }
+    }
+
+    /// Adds `hex` to the front unless it is a preset; keeps at most `limit`.
+    static func adding(_ hex: String, to raw: String) -> String {
+        guard !tripColorPresets.contains(hex) else { return raw }
+        let list = [hex] + load(raw).filter { $0 != hex }
+        return list.prefix(limit).joined(separator: ",")
+    }
+
+    static func removing(_ hex: String, from raw: String) -> String {
+        load(raw).filter { $0 != hex }.joined(separator: ",")
+    }
+}
+
+enum HexColor {
+    static func rgb(_ hex: String) -> (r: Double, g: Double, b: Double) {
+        var v: UInt64 = 0
+        Scanner(string: hex).scanHexInt64(&v)
+        return (Double(v >> 16 & 0xFF) / 255, Double(v >> 8 & 0xFF) / 255, Double(v & 0xFF) / 255)
+    }
+
+    /// Relative luminance (WCAG), 0 = black, 1 = white.
+    static func luminance(_ hex: String) -> Double {
+        func lin(_ c: Double) -> Double { c <= 0.03928 ? c / 12.92 : pow((c + 0.055) / 1.055, 2.4) }
+        let (r, g, b) = rgb(hex)
+        return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b)
+    }
+
+    /// "RRGGBB" for a SwiftUI color, in sRGB.
+    static func hex(from color: Color) -> String {
+        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        UIColor(color).getRed(&r, green: &g, blue: &b, alpha: &a)
+        func c(_ x: CGFloat) -> Int { Int((min(max(x, 0), 1) * 255).rounded()) }
+        return String(format: "%02X%02X%02X", c(r), c(g), c(b))
+    }
+
+    /// A darker version of `hex` with the same hue, for text on light backgrounds.
+    static func darkened(_ hex: String, factor: Double = 0.55) -> Color {
+        let (r, g, b) = rgb(hex)
+        return Color(.sRGB, red: r * factor, green: g * factor, blue: b * factor)
+    }
+}
+
 extension Trip {
+    /// Fill color (badges, highlights, card gradient).
     var color: Color { Color(hex: colorHex) }
+
+    /// Text or icon color on top of `color`.
+    var onColor: Color { HexColor.luminance(colorHex) > 0.45 ? Theme.textPrimary : .white }
+
+    /// `color` used as text or icons on the light app background; darkened when
+    /// the trip color is too pale to read.
+    var tint: Color { HexColor.luminance(colorHex) > 0.5 ? HexColor.darkened(colorHex) : color }
 }
 
 struct TripFormSheet: View {
@@ -25,6 +84,8 @@ struct TripFormSheet: View {
     @State private var pendingRemoval: [TripDay] = []
     @State private var showRemovalConfirm = false
     @State private var pendingShift: Int? = nil
+    @AppStorage(CustomTripColors.key) private var customColorsRaw: String = ""
+    @State private var pickerColor: Color = .orange
 
     private let quickEmojis = ["🇨🇳","🇳🇿","🇸🇬","🇯🇵","🇰🇷","🇺🇸","🇬🇧","🇫🇷","🇩🇪","🇮🇹",
                                "🇪🇸","🇹🇭","🇦🇪","🇪🇬","🇲🇦","🇹🇷","🇬🇷","🇵🇹","🇦🇺","✈️","🏖️","🏔️","🗺️","🧳"]
@@ -135,32 +196,60 @@ struct TripFormSheet: View {
     }
 
     private var colorField: some View {
-        VStack(alignment: .leading, spacing: 5) {
+        let custom = CustomTripColors.load(customColorsRaw)
+        // Keep a trip's existing color visible even if it is in neither list.
+        let extra = (tripColorPresets + custom).contains(colorHex) ? [] : [colorHex]
+        return VStack(alignment: .leading, spacing: 5) {
             label("Color")
-            HStack(spacing: 10) {
-                ForEach(tripColorPresets, id: \.self) { hex in
-                    Button { colorHex = hex } label: {
-                        Circle()
-                            .fill(Color(hex: hex))
-                            .frame(width: 30, height: 30)
-                            .overlay(
-                                Circle().stroke(Color.white, lineWidth: 2).padding(3)
-                                    .opacity(colorHex == hex ? 1 : 0)
-                            )
-                            .overlay(
-                                Circle().stroke(Color(hex: hex), lineWidth: 2).padding(-3)
-                                    .opacity(colorHex == hex ? 1 : 0)
-                            )
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Color \(hex)")
-                    .accessibilityAddTraits(colorHex == hex ? .isSelected : [])
-                }
+            FlowHStack(spacing: 10) {
+                ForEach(tripColorPresets, id: \.self) { swatch($0, removable: false) }
+                ForEach(extra + custom, id: \.self) { swatch($0, removable: custom.contains($0)) }
+                ColorPicker(selection: $pickerColor, supportsOpacity: false) { EmptyView() }
+                    .labelsHidden()
+                    .frame(width: 30, height: 30)
+                    .accessibilityLabel(Text("Custom color"))
             }
             .padding(.vertical, 4)
+            if !custom.isEmpty {
+                Text("Long-press a custom color to remove it.")
+                    .font(.system(size: 11))
+                    .foregroundColor(Theme.textTer)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.bottom, 4)
+        .onChange(of: pickerColor) { _, newColor in
+            colorHex = HexColor.hex(from: newColor)
+        }
+    }
+
+    private func swatch(_ hex: String, removable: Bool) -> some View {
+        Button { colorHex = hex } label: {
+            Circle()
+                .fill(Color(hex: hex))
+                .frame(width: 30, height: 30)
+                .overlay(Circle().stroke(Color.black.opacity(0.08), lineWidth: 1))
+                .overlay(
+                    Circle().stroke(Color.white, lineWidth: 2).padding(3)
+                        .opacity(colorHex == hex ? 1 : 0)
+                )
+                .overlay(
+                    Circle().stroke(Color(hex: hex), lineWidth: 2).padding(-3)
+                        .opacity(colorHex == hex ? 1 : 0)
+                )
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text("Color \(hex)"))
+        .accessibilityAddTraits(colorHex == hex ? .isSelected : [])
+        .contextMenu {
+            if removable {
+                Button(role: .destructive) {
+                    customColorsRaw = CustomTripColors.removing(hex, from: customColorsRaw)
+                } label: {
+                    Label("Remove Color", systemImage: "trash")
+                }
+            }
+        }
     }
 
     private var dateFields: some View {
@@ -191,6 +280,7 @@ struct TripFormSheet: View {
 
     private func save() {
         guard !trimmedName.isEmpty else { return }
+        customColorsRaw = CustomTripColors.adding(colorHex, to: customColorsRaw)
         let finalEmoji = emoji.trimmingCharacters(in: .whitespaces).isEmpty ? "✈️" : emoji
 
         if let editing {

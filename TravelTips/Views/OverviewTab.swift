@@ -21,13 +21,13 @@ struct OverviewTab: View {
                                   subject: Text("\(trip.emoji) \(trip.name)")) {
                             Image(systemName: "square.and.arrow.up.circle.fill")
                                 .font(.system(size: 26))
-                                .foregroundColor(trip.color)
+                                .foregroundColor(trip.tint)
                         }
                         .accessibilityLabel(Text("Share itinerary"))
                         Button { showEdit = true } label: {
                             Image(systemName: "pencil.circle.fill")
                                 .font(.system(size: 26))
-                                .foregroundColor(trip.color)
+                                .foregroundColor(trip.tint)
                         }
                         .buttonStyle(.plain)
                         .accessibilityLabel("Edit trip")
@@ -38,7 +38,7 @@ struct OverviewTab: View {
                             .foregroundColor(Theme.textSec)
                         Text("\(trip.totalDays) days")
                             .font(.system(size: 12, weight: .bold))
-                            .foregroundColor(trip.color)
+                            .foregroundColor(trip.tint)
                             .padding(.horizontal, 8)
                             .padding(.vertical, 2)
                             .background(trip.color.opacity(0.15))
@@ -56,7 +56,8 @@ struct OverviewTab: View {
                 let todayIndex = trip.todayIndex()
                 ForEach(Array(days.enumerated()), id: \.element.id) { i, day in
                     DayCard(day: day, dayNumber: i + 1, isToday: i == todayIndex,
-                            accent: trip.color, onTap: { onDay(i) })
+                            accent: trip.color, accentText: trip.tint, onAccent: trip.onColor,
+                            onTap: { onDay(i) })
                         .id(day.id)
                 }
 
@@ -85,6 +86,8 @@ private struct DayCard: View {
     let dayNumber: Int
     var isToday: Bool = false
     var accent: Color = Theme.primary
+    var accentText: Color = Theme.primary
+    var onAccent: Color = .white
     let onTap: () -> Void
 
     var body: some View {
@@ -96,7 +99,7 @@ private struct DayCard: View {
                         .fill(isToday ? accent : accent.opacity(0.19))
                     Text("D\(dayNumber)")
                         .font(.system(size: 15, weight: .heavy))
-                        .foregroundColor(isToday ? .white : accent)
+                        .foregroundColor(isToday ? onAccent : accentText)
                 }
                 .frame(width: 44, height: 44)
                 .flexibleFrame(maxWidth: 44)
@@ -110,7 +113,7 @@ private struct DayCard: View {
                             Text("TODAY")
                                 .font(.system(size: 10, weight: .heavy))
                                 .kerning(0.6)
-                                .foregroundColor(.white)
+                                .foregroundColor(onAccent)
                                 .padding(.horizontal, 6)
                                 .padding(.vertical, 2)
                                 .background(accent)

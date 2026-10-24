@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import SwiftUI
 import SwiftData
 import Testing
 @testable import TravelTips
@@ -410,5 +411,31 @@ struct TripShiftTests {
         #expect(after[4].transports.first?.id == flight.id)
         #expect(after[0].accommodation?.id == anchor.id)
         #expect(after[3].timelineItems.contains { $0.title == "Check-out" })
+    }
+}
+
+struct TripColorTests {
+    @Test func customColorsDedupeSkipPresetsAndCap() {
+        var raw = ""
+        raw = CustomTripColors.adding("FF8800", to: raw)
+        raw = CustomTripColors.adding("123456", to: raw)
+        raw = CustomTripColors.adding("FF8800", to: raw)          // moves to front, no duplicate
+        raw = CustomTripColors.adding(tripColorPresets[1], to: raw) // presets are not stored
+        #expect(CustomTripColors.load(raw) == ["FF8800", "123456"])
+        for i in 0..<20 { raw = CustomTripColors.adding(String(format: "0000%02X", i), to: raw) }
+        #expect(CustomTripColors.load(raw).count == CustomTripColors.limit)
+        #expect(CustomTripColors.load(CustomTripColors.removing("000013", from: raw)).contains("000013") == false)
+    }
+
+    @Test func hexRoundTripsThroughColor() {
+        #expect(HexColor.hex(from: Color(hex: "2196F3")) == "2196F3")
+        #expect(HexColor.hex(from: Color(hex: "000000")) == "000000")
+    }
+
+    @Test func luminanceDrivesReadableText() {
+        #expect(HexColor.luminance("FFFFFF") > 0.99)
+        #expect(HexColor.luminance("000000") < 0.01)
+        #expect(HexColor.luminance("FFE082") > 0.5)    // pale yellow → dark text, darkened tint
+        #expect(HexColor.luminance("076C44") < 0.45)   // app green → white text
     }
 }
