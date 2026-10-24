@@ -40,7 +40,7 @@ struct AccommodationTab: View {
                     Text("Accommodation")
                         .font(.system(size: 24, weight: .heavy))
                         .foregroundColor(Theme.textPrimary)
-                    Text("\(stays.count) hotel\(stays.count == 1 ? "" : "s")")
+                    Text("\(stays.count) hotels")
                         .font(.system(size: 13))
                         .foregroundColor(Theme.textSec)
                 }
@@ -156,7 +156,7 @@ private struct HotelCard: View {
                     }
                     Spacer()
                     PillView(
-                        text: "\(stay.nights) night\(stay.nights == 1 ? "" : "s")",
+                        text: String(localized: "\(stay.nights) nights"),
                         bg: Theme.hotel.opacity(0.13),
                         fg: Theme.hotel
                     )
@@ -168,7 +168,7 @@ private struct HotelCard: View {
                         copied = true
                         DispatchQueue.main.asyncAfter(deadline: .now() + 2) { copied = false }
                     } label: {
-                        Label(copied ? "Copied!" : "Copy Address",
+                        Label(copied ? LocalizedStringKey("Copied!") : LocalizedStringKey("Copy Address"),
                               systemImage: copied ? "checkmark" : "doc.on.doc")
                             .font(.system(size: 12, weight: .semibold))
                             .foregroundColor(copied ? Theme.hotel : .secondary)
@@ -314,7 +314,7 @@ private struct AddHotelSheet: View {
 
                         if let lid = firstAccId,
                            let inDay = days.first(where: { cal.isDate($0.date, inSameDayAs: checkInDate) }) {
-                            let tlIn = TimelineItem(time: "--:--", title: "Check-in · \(hotelName)",
+                            let tlIn = TimelineItem(time: "--:--", title: String(localized: "Check-in · \(hotelName)"),
                                                     type: .hotel, linkedId: lid,
                                                     sortOrder: inDay.timelineItems.count)
                             modelContext.insert(tlIn)
@@ -323,7 +323,7 @@ private struct AddHotelSheet: View {
 
                         if let lid = firstAccId,
                            let outDay = days.first(where: { cal.isDate($0.date, inSameDayAs: checkOutDate) }) {
-                            let tlOut = TimelineItem(time: "--:--", title: "Check-out · \(hotelName)",
+                            let tlOut = TimelineItem(time: "--:--", title: String(localized: "Check-out · \(hotelName)"),
                                                      type: .hotel, linkedId: lid,
                                                      sortOrder: outDay.timelineItems.count)
                             modelContext.insert(tlOut)
@@ -335,7 +335,7 @@ private struct AddHotelSheet: View {
                 }
                 .padding(20)
             }
-            .navigationTitle(editing != nil ? "Edit Hotel" : "Add Hotel")
+            .navigationTitle(editing != nil ? Text("Edit Hotel") : Text("Add Hotel"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {

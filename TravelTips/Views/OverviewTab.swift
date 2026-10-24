@@ -132,7 +132,7 @@ private struct DayCard: View {
                         }
                         if day.accommodation?.isCheckIn == true {
                             PillView(
-                                text: "🏨 Check-in",
+                                text: "🏨 " + String(localized: "Check-in"),
                                 bg: Theme.hotel.opacity(0.13),
                                 fg: Theme.hotel
                             )
@@ -140,7 +140,7 @@ private struct DayCard: View {
                         let destCount = day.destinations.count
                         if destCount > 0 {
                             PillView(
-                                text: "📍 \(destCount) place\(destCount > 1 ? "s" : "")",
+                                text: "📍 " + String(localized: "\(destCount) places"),
                                 bg: Theme.attraction.opacity(0.15),
                                 fg: Theme.attraction
                             )

@@ -320,7 +320,7 @@ private struct AddTransportSheet: View {
                 }
                 .padding(20)
             }
-            .navigationTitle(editing != nil ? "Edit Transport" : "Add Transport")
+            .navigationTitle(editing != nil ? Text("Edit Transport") : Text("Add Transport"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {

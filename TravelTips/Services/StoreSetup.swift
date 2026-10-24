@@ -30,10 +30,10 @@ enum StoreSetup {
                                       configurations: config)
         } catch {
             let backup = moveStoreAside()
+            let location = backup?.path ?? String(localized: "an unknown location")
             UserDefaults.standard.set(
-                "Your trips couldn't be opened by this version, so a new empty database was created. "
-                + "The original was kept at \(backup?.path ?? "an unknown location"). "
-                + "Error: \(error.localizedDescription)",
+                String(localized: "Your trips couldn't be opened by this version, so a new empty database was created. The original was kept at \(location).")
+                + "\n\n" + error.localizedDescription,
                 forKey: recoveryNoticeKey)
             return try! ModelContainer(for: schema, migrationPlan: TravelTipsMigrationPlan.self,
                                        configurations: config)

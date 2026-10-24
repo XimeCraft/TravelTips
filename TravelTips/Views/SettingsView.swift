@@ -4,7 +4,6 @@ import UIKit
 import UserNotifications
 
 struct SettingsView: View {
-    @AppStorage("appLanguage") private var language: String = "en"
     @AppStorage(NotificationScheduler.enabledKey) private var notificationsEnabled: Bool = false
     @Environment(\.modelContext) private var modelContext
     @State private var showPermissionDenied = false
@@ -25,33 +24,29 @@ struct SettingsView: View {
 
                 SectionHeader(title: "Preferences")
 
-                // Language
-                CardView {
+                // Language: iOS per-app language (Settings > TravelTips > Language).
+                // Changing it there relaunches the app in that language.
+                CardView(action: openAppSettings) {
                     HStack(spacing: 12) {
                         Image(systemName: "globe")
                             .font(.system(size: 20))
                             .foregroundColor(Theme.primary)
                             .frame(width: 26)
-                        Text("Language")
-                            .font(.system(size: 15, weight: .medium))
-                            .foregroundColor(Theme.textPrimary)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                        HStack(spacing: 4) {
-                            ForEach([("en", "EN"), ("zh", "中文")], id: \.0) { code, label in
-                                Button {
-                                    language = code
-                                } label: {
-                                    Text(label)
-                                        .font(.system(size: 12, weight: .semibold))
-                                        .padding(.horizontal, 12)
-                                        .padding(.vertical, 6)
-                                        .background(language == code ? Theme.primary : Color(.systemGray5))
-                                        .foregroundColor(language == code ? .white : Theme.textSec)
-                                        .cornerRadius(8)
-                                }
-                                .buttonStyle(.plain)
-                            }
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Language")
+                                .font(.system(size: 15, weight: .medium))
+                                .foregroundColor(Theme.textPrimary)
+                            Text("Change it in iOS Settings")
+                                .font(.system(size: 11))
+                                .foregroundColor(Theme.textSec)
                         }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        Text(currentLanguageName)
+                            .font(.system(size: 14))
+                            .foregroundColor(Theme.textSec)
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundColor(Color(.systemGray3))
                     }
                 }
 
@@ -137,6 +132,18 @@ struct SettingsView: View {
         }
     }
 
+    /// The app's current UI language, named in that language ("English", "简体中文").
+    private var currentLanguageName: String {
+        let code = Bundle.main.preferredLocalizations.first ?? "en"
+        return Locale(identifier: code).localizedString(forIdentifier: code)?.capitalized(with: Locale(identifier: code)) ?? code
+    }
+
+    private func openAppSettings() {
+        if let url = URL(string: UIApplication.openSettingsURLString) {
+            UIApplication.shared.open(url)
+        }
+    }
+
     private var appName: String {
         (Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String)
             ?? (Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String)
@@ -146,7 +153,7 @@ struct SettingsView: View {
     private var appVersion: String {
         let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "?"
         let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "?"
-        return "Version \(version) (\(build))"
+        return String(localized: "Version \(version) (\(build))")
     }
 
     private func notificationsToggled(_ enabled: Bool) async {

@@ -17,7 +17,16 @@ enum TransportType: String, Codable, CaseIterable {
         }
     }
 
-    var displayName: String { rawValue.capitalized }
+    var displayName: String {
+        switch self {
+        case .flight: return String(localized: "Flight")
+        case .drive:  return String(localized: "Drive")
+        case .train:  return String(localized: "Train")
+        case .bus:    return String(localized: "Bus")
+        case .ferry:  return String(localized: "Ferry")
+        case .other:  return String(localized: "Other")
+        }
+    }
 
     var timelineType: TimelineType {
         switch self {
@@ -41,6 +50,16 @@ enum DestinationType: String, Codable, CaseIterable {
         case .restaurant: return .restaurant
         case .shopping:   return .other
         case .other:      return .other
+        }
+    }
+
+    var displayName: String {
+        switch self {
+        case .attraction: return String(localized: "Attraction")
+        case .activity:   return String(localized: "Activity")
+        case .restaurant: return String(localized: "Restaurant")
+        case .shopping:   return String(localized: "Shopping")
+        case .other:      return String(localized: "Other")
         }
     }
 
@@ -78,7 +97,20 @@ enum TimelineType: String, Codable, CaseIterable {
         }
     }
 
-    var displayName: String { rawValue.capitalized }
+    var displayName: String {
+        switch self {
+        case .flight:     return String(localized: "Flight")
+        case .drive:      return String(localized: "Drive")
+        case .train:      return String(localized: "Train")
+        case .bus:        return String(localized: "Bus")
+        case .ferry:      return String(localized: "Ferry")
+        case .hotel:      return String(localized: "Hotel")
+        case .attraction: return String(localized: "Attraction")
+        case .restaurant: return String(localized: "Restaurant")
+        case .activity:   return String(localized: "Activity")
+        case .other:      return String(localized: "Other")
+        }
+    }
 
     var isTransport: Bool {
         switch self {

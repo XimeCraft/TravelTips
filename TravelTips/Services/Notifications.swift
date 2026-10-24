@@ -34,8 +34,8 @@ enum NotificationPlanner {
                 result.append((fire, PlannedNotification(
                     id: "\(idPrefix)\(trip.id)-eve",
                     fire: components(fire, calendar),
-                    title: "\(trip.emoji) \(trip.name) starts tomorrow",
-                    body: "Day 1 · " + summary(of: first)
+                    title: String(localized: "\(trip.emoji) \(trip.name) starts tomorrow"),
+                    body: String(localized: "Day 1 · \(summary(of: first))")
                 )))
             }
 
@@ -46,7 +46,9 @@ enum NotificationPlanner {
                 result.append((fire, PlannedNotification(
                     id: "\(idPrefix)\(trip.id)-day\(i + 1)",
                     fire: components(fire, calendar),
-                    title: "\(trip.emoji) Day \(i + 1)" + (place.isEmpty ? " of \(trip.name)" : " · \(place)"),
+                    title: place.isEmpty
+                        ? String(localized: "\(trip.emoji) Day \(i + 1) of \(trip.name)")
+                        : String(localized: "\(trip.emoji) Day \(i + 1) · \(place)"),
                     body: summary(of: day)
                 )))
             }
@@ -63,10 +65,10 @@ enum NotificationPlanner {
         }
         if !items.isEmpty {
             let more = day.timelineItems.count - items.count
-            return items.joined(separator: " · ") + (more > 0 ? " · +\(more) more" : "")
+            return items.joined(separator: " · ") + (more > 0 ? " · " + String(localized: "+\(more) more") : "")
         }
         let s = day.summary.trimmingCharacters(in: .whitespaces)
-        return s.isEmpty ? "No plans yet. Open TravelTips to add some." : s
+        return s.isEmpty ? String(localized: "No plans yet. Open TravelTips to add some.") : s
     }
 
     private static func at(_ hour: Int, on day: Date, _ cal: Calendar) -> Date? {
@@ -88,8 +90,24 @@ enum NotificationScheduler {
     /// Replaces all pending trip notifications with a fresh plan. Does nothing
     /// beyond clearing them when the user has turned notifications off or
     /// hasn't granted permission. Never prompts for permission.
+    /// The reschedule in flight, if any. Calls are chained so two of them never
+    /// interleave their clear/add steps (app activation and the Settings toggle
+    /// often fire together).
+    @MainActor private static var inFlight: Task<Void, Never>?
+
     @MainActor
     static func reschedule(context: ModelContext) async {
+        let previous = inFlight
+        let task = Task { @MainActor in
+            await previous?.value
+            await performReschedule(context: context)
+        }
+        inFlight = task
+        await task.value
+    }
+
+    @MainActor
+    private static func performReschedule(context: ModelContext) async {
         let center = UNUserNotificationCenter.current()
         await clearTripNotifications(center)
 

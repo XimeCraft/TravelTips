@@ -128,11 +128,11 @@ struct RemindersView: View {
 
             let title: String
             if toStart > 1 {
-                title = "\(trip.name) starts in \(toStart) days"
+                title = String(localized: "\(trip.name) starts in \(toStart) days")
             } else if toStart == 1 {
-                title = "\(trip.name) starts tomorrow"
+                title = String(localized: "\(trip.name) starts tomorrow")
             } else {
-                title = "\(trip.name) is now!"
+                title = String(localized: "\(trip.name) is happening now")
             }
             return TripReminderItem(
                 icon: trip.emoji,

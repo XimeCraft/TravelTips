@@ -19,13 +19,13 @@ extension TripDay {
     /// Short description of what is on the day, e.g. "1 transport, 2 places".
     var contentSummary: String {
         var parts: [String] = []
-        if !transports.isEmpty { parts.append("\(transports.count) transport") }
-        if accommodation != nil { parts.append("1 hotel night") }
-        if !destinations.isEmpty { parts.append("\(destinations.count) place\(destinations.count > 1 ? "s" : "")") }
+        if !transports.isEmpty { parts.append(String(localized: "\(transports.count) transport")) }
+        if accommodation != nil { parts.append(String(localized: "1 hotel night")) }
+        if !destinations.isEmpty { parts.append(String(localized: "\(destinations.count) places")) }
         let manual = timelineItems.filter { $0.linkedId == nil }.count
-        if manual > 0 { parts.append("\(manual) timeline item\(manual > 1 ? "s" : "")") }
-        if parts.isEmpty { parts.append("notes") }
-        return parts.joined(separator: ", ")
+        if manual > 0 { parts.append(String(localized: "\(manual) timeline items")) }
+        if parts.isEmpty { parts.append(String(localized: "notes")) }
+        return parts.joined(separator: String(localized: ", ", comment: "List separator"))
     }
 }
 

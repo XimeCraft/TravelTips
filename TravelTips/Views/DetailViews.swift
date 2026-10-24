@@ -34,11 +34,11 @@ enum AttachmentError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .copyFailed(let name, let err): return "Couldn't import \"\(name)\". \(err.localizedDescription)"
-        case .writeFailed(let err):          return "Couldn't save the photo. \(err.localizedDescription)"
-        case .photoLoadFailed:               return "Couldn't load the selected photo. If it is stored in iCloud, try again once it has downloaded."
-        case .fileMissing(let name):         return "\"\(name)\" is no longer on this device. Delete it and attach the file again."
-        case .cameraUnavailable:             return "The camera isn't available on this device."
+        case .copyFailed(let name, let err): return String(localized: "Couldn't import \"\(name)\".") + " " + err.localizedDescription
+        case .writeFailed(let err):          return String(localized: "Couldn't save the photo.") + " " + err.localizedDescription
+        case .photoLoadFailed:               return String(localized: "Couldn't load the selected photo. If it is stored in iCloud, try again once it has downloaded.")
+        case .fileMissing(let name):         return String(localized: "\"\(name)\" is no longer on this device. Delete it and attach the file again.")
+        case .cameraUnavailable:             return String(localized: "The camera isn't available on this device.")
         }
     }
 }
@@ -180,12 +180,13 @@ struct AttachmentSectionView: View {
             // Inline add menu
             if showAddMenu {
                 VStack(spacing: 0) {
-                    ForEach([
+                    let menu: [(icon: String, label: LocalizedStringKey)] = [
                         ("folder", "Choose from Files"),
                         ("photo.on.rectangle", "Choose from Photos"),
                         ("camera", "Take Photo"),
-                    ], id: \.0) { icon, label in
-                        if label == "Choose from Photos" {
+                    ]
+                    ForEach(menu, id: \.icon) { icon, label in
+                        if icon == "photo.on.rectangle" {
                             PhotosPicker(selection: $photoPickerItem, matching: .images) {
                                 menuRow(icon: icon, label: label)
                             }
@@ -193,7 +194,7 @@ struct AttachmentSectionView: View {
                         } else {
                             Button {
                                 showAddMenu = false
-                                if label == "Choose from Files" { showDocPicker = true }
+                                if icon == "folder" { showDocPicker = true }
                                 else if UIImagePickerController.isSourceTypeAvailable(.camera) { showCamera = true }
                                 else { report(AttachmentError.cameraUnavailable) }
                             } label: {
@@ -294,7 +295,7 @@ struct AttachmentSectionView: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { errorMessage = message }
     }
 
-    private func menuRow(icon: String, label: String) -> some View {
+    private func menuRow(icon: String, label: LocalizedStringKey) -> some View {
         HStack(spacing: 10) {
             Image(systemName: icon)
                 .font(.system(size: 16))
@@ -383,10 +384,10 @@ struct TransportDetailView: View {
         self.transport = transport
         self.day = day
         rows = [
-            ("Reference", transport.detail.isEmpty ? "—" : transport.detail),
-            ("Type",       transport.type.displayName),
-            ("Departure",  "\(transport.departureTime.isEmpty ? "—" : transport.departureTime) · \(transport.from)"),
-            ("Arrival",    "\(transport.arrivalTime.isEmpty ? "—" : transport.arrivalTime) · \(transport.to)"),
+            (String(localized: "Reference"), transport.detail.isEmpty ? "—" : transport.detail),
+            (String(localized: "Type"), transport.type.displayName),
+            (String(localized: "Departure"), "\(transport.departureTime.isEmpty ? "—" : transport.departureTime) · \(transport.from)"),
+            (String(localized: "Arrival"), "\(transport.arrivalTime.isEmpty ? "—" : transport.arrivalTime) · \(transport.to)"),
         ]
     }
 
@@ -541,7 +542,7 @@ struct HotelDetailView: View {
                             }
                             Spacer()
                             PillView(
-                                text: "\(stay.nights) night\(stay.nights == 1 ? "" : "s")",
+                                text: String(localized: "\(stay.nights) nights"),
                                 bg: Theme.hotel.opacity(0.13),
                                 fg: Theme.hotel
                             )
@@ -552,10 +553,10 @@ struct HotelDetailView: View {
 
                         // Detail rows
                         let rows: [(String, String)] = [
-                            ("Address",   stay.address),
-                            ("Check-in",  fmtDate(stay.startDate)),
-                            ("Check-out", fmtDate(stay.endDate)),
-                            ("Nights",    "\(stay.nights) night\(stay.nights == 1 ? "" : "s")"),
+                            (String(localized: "Address"), stay.address),
+                            (String(localized: "Check-in"), fmtDate(stay.startDate)),
+                            (String(localized: "Check-out"), fmtDate(stay.endDate)),
+                            (String(localized: "Nights"), String(localized: "\(stay.nights) nights")),
                         ]
                         CardView {
                             VStack(spacing: 0) {
@@ -583,7 +584,7 @@ struct HotelDetailView: View {
                                 copied = true
                                 DispatchQueue.main.asyncAfter(deadline: .now() + 2) { copied = false }
                             } label: {
-                                Label(copied ? "Copied!" : "Copy Address",
+                                Label(copied ? LocalizedStringKey("Copied!") : LocalizedStringKey("Copy Address"),
                                       systemImage: copied ? "checkmark" : "doc.on.doc")
                                     .font(.system(size: 12, weight: .semibold))
                                     .foregroundColor(copied ? Theme.hotel : .secondary)
@@ -673,7 +674,7 @@ struct PlaceDetailView: View {
                         }
                         if let (dayIdx, day) = dayInfo {
                             PillView(
-                                text: "Day \(dayIdx + 1), \(fmtDateShort(day.date))",
+                                text: String(localized: "Day \(dayIdx + 1), \(fmtDateShort(day.date))"),
                                 bg: Color(.systemGray5), fg: Theme.textSec
                             )
                         }
@@ -684,10 +685,10 @@ struct PlaceDetailView: View {
 
                     // Detail rows
                     let rows: [(String, String)] = [
-                        ("Address", dest.address),
-                        ("Time",    dest.time ?? "—"),
-                        ("Ticket",  dest.ticketPrice ?? "Free"),
-                        ("Type",    dest.type.rawValue.capitalized),
+                        (String(localized: "Address"), dest.address),
+                        (String(localized: "Time"), dest.time.map { $0 == TimeRangeField.allDay ? String(localized: "All Day") : $0 } ?? "—"),
+                        (String(localized: "Ticket"), dest.ticketPrice ?? String(localized: "Free")),
+                        (String(localized: "Type"), dest.type.displayName),
                     ]
                     CardView {
                         VStack(spacing: 0) {
@@ -733,7 +734,7 @@ struct PlaceDetailView: View {
                             copied = true
                             DispatchQueue.main.asyncAfter(deadline: .now() + 2) { copied = false }
                         } label: {
-                            Label(copied ? "Copied!" : "Copy Address",
+                            Label(copied ? LocalizedStringKey("Copied!") : LocalizedStringKey("Copy Address"),
                                   systemImage: copied ? "checkmark" : "doc.on.doc")
                                 .font(.system(size: 12, weight: .semibold))
                                 .foregroundColor(copied ? dest.type.color : .secondary)

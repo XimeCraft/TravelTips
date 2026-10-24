@@ -54,7 +54,7 @@ private func minutesFor(date: Date) -> Int {
 // MARK: - Shared pieces
 
 private struct FieldLabel: View {
-    let text: String
+    let text: LocalizedStringKey
     var body: some View {
         Text(text)
             .font(.system(size: 11, weight: .bold))
@@ -65,7 +65,7 @@ private struct FieldLabel: View {
 }
 
 private struct ChipButton: View {
-    let title: String
+    let title: LocalizedStringKey
     let action: () -> Void
     var body: some View {
         Button(action: action) {
@@ -130,7 +130,7 @@ private struct LegacyValue: View {
 
 /// Optional single time. Writes "HH:mm" or "" into `text`.
 struct TimeField: View {
-    let label: String
+    let label: LocalizedStringKey
     @Binding var text: String
     var defaultMinutes: Int = 9 * 60
 
@@ -159,7 +159,7 @@ struct TimeField: View {
 /// Optional time or time range for places. Writes "HH:mm", "HH:mm-HH:mm",
 /// "All Day" or "" into `text`.
 struct TimeRangeField: View {
-    let label: String
+    let label: LocalizedStringKey
     @Binding var text: String
 
     static let allDay = "All Day"
@@ -189,9 +189,9 @@ struct TimeRangeField: View {
             HStack(spacing: 8) {
                 if isEmptyTime(text) {
                     ChipButton(title: "+ Set time") { write(start: 9 * 60, end: nil) }
-                    ChipButton(title: Self.allDay) { text = Self.allDay }
+                    ChipButton(title: "All Day") { text = Self.allDay }
                 } else if text.caseInsensitiveCompare(Self.allDay) == .orderedSame {
-                    Text(Self.allDay)
+                    Text("All Day")
                         .font(.system(size: 14))
                         .foregroundColor(Theme.textPrimary)
                         .padding(10)

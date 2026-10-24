@@ -75,17 +75,22 @@ extension Color {
 
 // MARK: - Date helpers
 
-func fmtDate(_ date: Date) -> String {
+// Localized from templates: "Sat, Oct 24" in English, "10月24日 周六" in Chinese.
+private let dateFormatter: DateFormatter = {
     let f = DateFormatter()
-    f.dateFormat = "EEE, MMM d"
-    return f.string(from: date)
-}
+    f.setLocalizedDateFormatFromTemplate("EEEMMMd")
+    return f
+}()
 
-func fmtDateShort(_ date: Date) -> String {
+private let shortDateFormatter: DateFormatter = {
     let f = DateFormatter()
-    f.dateFormat = "MMM d"
-    return f.string(from: date)
-}
+    f.setLocalizedDateFormatFromTemplate("MMMd")
+    return f
+}()
+
+func fmtDate(_ date: Date) -> String { dateFormatter.string(from: date) }
+
+func fmtDateShort(_ date: Date) -> String { shortDateFormatter.string(from: date) }
 
 func daysBetween(_ start: Date, _ end: Date) -> Int {
     let cal = Calendar.current

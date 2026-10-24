@@ -108,7 +108,7 @@ private struct DayCard: View {
                         day.dayDone = allDone
                         for item in day.timelineItems { item.isDone = allDone }
                     }
-                    Text(day.dayDone ? "Day completed ✓" : "Mark day as done")
+                    Text(day.dayDone ? LocalizedStringKey("Day completed ✓") : LocalizedStringKey("Mark day as done"))
                         .font(.system(size: 13, weight: .semibold))
                         .foregroundColor(day.dayDone ? Theme.primary : Theme.textSec)
                     Spacer()

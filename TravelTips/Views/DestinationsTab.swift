@@ -20,7 +20,7 @@ struct DestinationsTab: View {
                     Text("Places to Visit")
                         .font(.system(size: 24, weight: .heavy))
                         .foregroundColor(Theme.textPrimary)
-                    Text("\(totalDestinations) destination\(totalDestinations == 1 ? "" : "s")")
+                    Text("\(totalDestinations) places")
                         .font(.system(size: 13))
                         .foregroundColor(Theme.textSec)
                 }
@@ -214,7 +214,7 @@ private struct AddPlaceSheet: View {
                             .kerning(0.8)
                         Picker("Type", selection: $type) {
                             ForEach(DestinationType.allCases, id: \.self) { t in
-                                Text("\(t.emoji) \(t.rawValue.capitalized)").tag(t)
+                                Text("\(t.emoji) \(t.displayName)").tag(t)
                             }
                         }
                         .pickerStyle(.menu)
@@ -274,7 +274,7 @@ private struct AddPlaceSheet: View {
                 }
                 .padding(20)
             }
-            .navigationTitle(editing != nil ? "Edit Place" : "Add Place")
+            .navigationTitle(editing != nil ? Text("Edit Place") : Text("Add Place"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {

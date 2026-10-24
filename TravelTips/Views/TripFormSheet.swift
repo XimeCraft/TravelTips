@@ -55,7 +55,7 @@ struct TripFormSheet: View {
                 .padding(20)
             }
             .confirmationDialog(
-                "Remove \(pendingRemoval.count) day\(pendingRemoval.count == 1 ? "" : "s") from the trip?",
+                Text("Remove \(pendingRemoval.count) days from the trip?"),
                 isPresented: $showRemovalConfirm,
                 titleVisibility: .visible
             ) {
@@ -67,7 +67,7 @@ struct TripFormSheet: View {
             .onChange(of: startDate) { _, newStart in
                 if endDate < newStart { endDate = newStart }
             }
-            .navigationTitle(editing == nil ? "New Trip" : "Edit Trip")
+            .navigationTitle(editing == nil ? Text("New Trip") : Text("Edit Trip"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -80,7 +80,7 @@ struct TripFormSheet: View {
 
     // MARK: Fields
 
-    private func label(_ text: String) -> some View {
+    private func label(_ text: LocalizedStringKey) -> some View {
         Text(text)
             .font(.system(size: 11, weight: .bold))
             .foregroundColor(Theme.textSec)
@@ -210,9 +210,9 @@ struct TripFormSheet: View {
 
     private var removalMessage: String {
         let withContent = pendingRemoval.filter(\.hasContent)
-        let lines = withContent.prefix(5).map { "\(fmtDate($0.date)): \($0.contentSummary)" }
+        let lines = withContent.prefix(5).map { String(localized: "\(fmtDate($0.date)): \($0.contentSummary)") }
         var text = lines.joined(separator: "\n")
-        if withContent.count > 5 { text += "\n…and \(withContent.count - 5) more" }
-        return text + "\n\nEverything on these days, including attachments, will be deleted."
+        if withContent.count > 5 { text += "\n" + String(localized: "…and \(withContent.count - 5) more") }
+        return text + "\n\n" + String(localized: "Everything on these days, including attachments, will be deleted.")
     }
 }

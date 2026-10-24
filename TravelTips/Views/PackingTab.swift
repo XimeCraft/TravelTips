@@ -200,7 +200,7 @@ private func packingSections(_ items: [PackingItem], tags: [PackingTag]) -> [(ta
     let untagged = items.filter { item in
         item.tag == nil || !tags.contains(where: { $0.name == item.tag })
     }
-    if !untagged.isEmpty { result.append(("Untagged", untagged)) }
+    if !untagged.isEmpty { result.append((String(localized: "Untagged"), untagged)) }
     return result
 }
 
@@ -314,7 +314,7 @@ struct PackingDetailView: View {
                         CheckboxView(isChecked: item.isPacked, color: Theme.primary, size: 22) {
                             item.isPacked.toggle()
                         }
-                        Text(item.isPacked ? "Packed ✓" : "Mark as packed")
+                        Text(item.isPacked ? LocalizedStringKey("Packed ✓") : LocalizedStringKey("Mark as packed"))
                             .font(.system(size: 14, weight: .semibold))
                             .foregroundColor(item.isPacked ? Theme.primary : Theme.textSec)
                         Spacer()
@@ -421,7 +421,7 @@ private struct TagPicker: View {
             }
         } label: {
             HStack {
-                Text(selection ?? "None")
+                (selection.map { Text($0) } ?? Text("None"))
                     .font(.system(size: 14))
                     .foregroundColor(selection == nil ? Theme.textTer : Theme.textPrimary)
                 Spacer()
@@ -481,7 +481,7 @@ private struct QuantityStepperField: View {
 
 // MARK: - Shared label style
 
-private func fieldLabel(_ text: String) -> some View {
+private func fieldLabel(_ text: LocalizedStringKey) -> some View {
     Text(text)
         .font(.system(size: 11, weight: .bold))
         .foregroundColor(Theme.textSec)

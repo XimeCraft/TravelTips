@@ -134,7 +134,7 @@ struct FlowHStack: Layout {
 // MARK: - Section Header
 
 struct SectionHeader: View {
-    let title: String
+    let title: LocalizedStringKey
 
     var body: some View {
         Text(title)
@@ -152,7 +152,7 @@ struct SectionHeader: View {
 // MARK: - Back Button
 
 struct BackButton: View {
-    let label: String
+    let label: LocalizedStringKey
     var color: Color = Theme.primary
     let action: () -> Void
 
@@ -220,9 +220,9 @@ struct ViewDetailsButton: View {
 // MARK: - Sheet Form Field
 
 struct SheetField: View {
-    let label: String
+    let label: LocalizedStringKey
     @Binding var text: String
-    var placeholder: String = ""
+    var placeholder: LocalizedStringKey = ""
     var multiline: Bool = false
 
     var body: some View {
@@ -254,7 +254,7 @@ struct SheetField: View {
 // MARK: - Sheet Save Button
 
 struct SheetSaveButton: View {
-    let label: String
+    let label: LocalizedStringKey
     let action: () -> Void
 
     var body: some View {
@@ -287,9 +287,9 @@ enum MainTab: String, CaseIterable {
 
     var label: String {
         switch self {
-        case .trips:     return "Trips"
-        case .reminders: return "Reminders"
-        case .settings:  return "Settings"
+        case .trips:     return String(localized: "Trips")
+        case .reminders: return String(localized: "Reminders")
+        case .settings:  return String(localized: "Settings")
         }
     }
 }
@@ -310,12 +310,12 @@ enum TripTab: String, CaseIterable {
 
     var label: String {
         switch self {
-        case .overview:      return "Overview"
-        case .transport:     return "Transport"
-        case .accommodation: return "Hotels"
-        case .destinations:  return "Places"
-        case .packing:       return "Packing"
-        case .info:          return "Info"
+        case .overview:      return String(localized: "Overview")
+        case .transport:     return String(localized: "Transport")
+        case .accommodation: return String(localized: "Hotels")
+        case .destinations:  return String(localized: "Places")
+        case .packing:       return String(localized: "Packing")
+        case .info:          return String(localized: "Info")
         }
     }
 }

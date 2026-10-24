@@ -141,7 +141,7 @@ private struct AddInfoItemSheet: View {
                 }
                 .padding(20)
             }
-            .navigationTitle(editing != nil ? "Edit Info" : "Add Info Item")
+            .navigationTitle(editing != nil ? Text("Edit Info") : Text("Add Info Item"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
