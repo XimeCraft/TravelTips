@@ -86,8 +86,11 @@ struct ContentView: View {
         .ignoresSafeArea(edges: .bottom)
         .preferredColorScheme(.light)   // app is designed light-only; lock it to avoid dark-on-dark
         .onAppear {
+            // Sample data is for development only; Release starts empty (see A6).
+            #if DEBUG
             seedIfNeeded(context: modelContext)
             seedPackingIfNeeded(context: modelContext)
+            #endif
         }
     }
 }
