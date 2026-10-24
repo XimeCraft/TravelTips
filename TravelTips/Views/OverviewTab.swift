@@ -17,6 +17,13 @@ struct OverviewTab: View {
                             .font(.system(size: 26, weight: .heavy))
                             .foregroundColor(Theme.textPrimary)
                         Spacer()
+                        ShareLink(item: TripShareText.make(trip),
+                                  subject: Text("\(trip.emoji) \(trip.name)")) {
+                            Image(systemName: "square.and.arrow.up.circle.fill")
+                                .font(.system(size: 26))
+                                .foregroundColor(trip.color)
+                        }
+                        .accessibilityLabel(Text("Share itinerary"))
                         Button { showEdit = true } label: {
                             Image(systemName: "pencil.circle.fill")
                                 .font(.system(size: 26))

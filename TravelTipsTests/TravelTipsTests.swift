@@ -328,3 +328,38 @@ struct NotificationPlannerTests {
                 == "08:00 Flight · 10:30-12:00 Tour · 14:30 Museum · 18:00 Dinner · +1 more")
     }
 }
+
+@MainActor
+struct TripShareTextTests {
+    @Test func listsDaysAndTimelineButNotInfo() throws {
+        let ctx = try makeContext()
+        let cal = Calendar.current
+        let start = cal.date(from: DateComponents(year: 2026, month: 10, day: 20))!
+        let trip = Trip(name: "Spain", emoji: "🇪🇸", startDate: start, endDate: start + 86400)
+        ctx.insert(trip)
+        for (i, date) in TripDates.dayStarts(from: trip.startDate, to: trip.endDate).enumerated() {
+            trip.days.append(TripDay(date: date, city: i == 0 ? "Barcelona" : "", summary: i == 0 ? "Gaudí day" : "", sortOrder: i))
+        }
+        let d0 = trip.sortedDays[0]
+        d0.timelineItems.append(TimelineItem(time: "14:30", title: "Sagrada Família", address: "C/ de Mallorca 401", sortOrder: 0))
+        d0.timelineItems.append(TimelineItem(time: "--:--", title: "Check-out", sortOrder: 1))
+        d0.timelineItems.append(TimelineItem(time: "09:00", title: "Casa Batlló", sortOrder: 2))
+        trip.infoItems.append(InfoItem(title: "Passport", details: "E12345678"))
+
+        let text = TripShareText.make(trip)
+        let lines = text.components(separatedBy: "\n")
+
+        #expect(lines[0] == "🇪🇸 Spain")
+        #expect(text.contains("Day 1 · \(fmtDate(trip.sortedDays[0].date)) · Barcelona"))
+        #expect(text.contains("Gaudí day"))
+        // Time order, untimed last, address under its item.
+        let batllo = try #require(lines.firstIndex(of: "  • 09:00  Casa Batlló"))
+        let sagrada = try #require(lines.firstIndex(of: "  • 14:30  Sagrada Família"))
+        let checkout = try #require(lines.firstIndex(of: "  • Check-out"))
+        #expect(batllo < sagrada && sagrada < checkout)
+        #expect(lines[sagrada + 1] == "    📍 C/ de Mallorca 401")
+        #expect(text.contains("Day 2 · "))
+        #expect(!text.contains("E12345678"))
+        #expect(!text.contains("Passport"))
+    }
+}
