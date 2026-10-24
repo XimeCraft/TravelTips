@@ -652,6 +652,16 @@
         }
       }
     },
+    "Clears every check mark so the list is ready for your next trip. Items, tags and notes stay.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "清除所有勾选，为下次出行做好准备。物品、标签和备注都会保留。"
+          }
+        }
+      }
+    },
     "Color": {
       "localizations": {
         "zh-Hans": {
@@ -1222,6 +1232,82 @@
         }
       }
     },
+    "Move Everything": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "整体平移"
+          }
+        }
+      }
+    },
+    "Move keeps every day's plans, hotels and transport and shifts them with the trip. Only changing the dates removes the days that fall outside the new range.": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "整体平移会保留每天的安排、酒店和交通，并随行程一起移动。只修改日期会删除超出新范围的日期。"
+          }
+        }
+      }
+    },
+    "Move the trip %lld days earlier?": {
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Move the trip %lld day earlier?"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Move the trip %lld days earlier?"
+                }
+              }
+            }
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "将行程提前 %lld 天？"
+          }
+        }
+      }
+    },
+    "Move the trip %lld days later?": {
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Move the trip %lld day later?"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Move the trip %lld days later?"
+                }
+              }
+            }
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "将行程推后 %lld 天？"
+          }
+        }
+      }
+    },
     "My Tasks": {
       "localizations": {
         "zh-Hans": {
@@ -1418,6 +1504,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "好"
+          }
+        }
+      }
+    },
+    "Only Change the Dates": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "只修改日期"
           }
         }
       }
@@ -1674,6 +1770,26 @@
         }
       }
     },
+    "Share itinerary": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "分享行程"
+          }
+        }
+      }
+    },
+    "Shared from TravelTips": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "来自 TravelTips 的行程分享"
+          }
+        }
+      }
+    },
     "Shopping": {
       "localizations": {
         "zh-Hans": {
@@ -1690,6 +1806,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "开始日期"
+          }
+        }
+      }
+    },
+    "Start packing again?": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "重新开始打包？"
           }
         }
       }
@@ -1920,6 +2046,44 @@
           "stringUnit": {
             "state": "translated",
             "value": "类型"
+          }
+        }
+      }
+    },
+    "Unpack All %lld Items": {
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Unpack %lld Item"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Unpack All %lld Items"
+                }
+              }
+            }
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "取消全部 %lld 项的勾选"
+          }
+        }
+      }
+    },
+    "Unpack all": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "全部取消勾选"
           }
         }
       }
