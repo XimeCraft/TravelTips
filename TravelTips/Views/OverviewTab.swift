@@ -17,8 +17,18 @@ struct OverviewTab: View {
                             .font(.system(size: 26, weight: .heavy))
                             .foregroundColor(Theme.textPrimary)
                         Spacer()
-                        ShareLink(item: TripShareText.make(trip),
-                                  subject: Text("\(trip.emoji) \(trip.name)")) {
+                        Menu {
+                            ShareLink(item: TripPDFFile(trip: trip),
+                                      preview: SharePreview(TripExport.fileName(for: trip, ext: "pdf"),
+                                                            image: Image(systemName: "doc.richtext"))) {
+                                Label("Share as PDF", systemImage: "doc.richtext")
+                            }
+                            ShareLink(item: TripMarkdownFile(trip: trip),
+                                      preview: SharePreview(TripExport.fileName(for: trip, ext: "md"),
+                                                            image: Image(systemName: "doc.plaintext"))) {
+                                Label("Share as Markdown", systemImage: "doc.plaintext")
+                            }
+                        } label: {
                             Image(systemName: "square.and.arrow.up.circle.fill")
                                 .font(.system(size: 26))
                                 .foregroundColor(trip.tint)

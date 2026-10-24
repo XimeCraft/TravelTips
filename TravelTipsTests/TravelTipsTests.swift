@@ -331,37 +331,110 @@ struct NotificationPlannerTests {
 }
 
 @MainActor
-struct TripShareTextTests {
-    @Test func listsDaysAndTimelineButNotInfo() throws {
-        let ctx = try makeContext()
+struct TripExportTests {
+    func makeSpain(_ ctx: ModelContext) -> Trip {
         let cal = Calendar.current
         let start = cal.date(from: DateComponents(year: 2026, month: 10, day: 20))!
-        let trip = Trip(name: "Spain", emoji: "🇪🇸", startDate: start, endDate: start + 86400)
+        let trip = Trip(name: "Spain", emoji: "🇪🇸", startDate: start, endDate: start + 2 * 86400, colorHex: "2196F3")
         ctx.insert(trip)
         for (i, date) in TripDates.dayStarts(from: trip.startDate, to: trip.endDate).enumerated() {
-            trip.days.append(TripDay(date: date, city: i == 0 ? "Barcelona" : "", summary: i == 0 ? "Gaudí day" : "", sortOrder: i))
+            trip.days.append(TripDay(date: date, city: ["Barcelona", "Barcelona", "Seville"][i],
+                                     summary: i == 0 ? "Gaudí | day" : "", sortOrder: i))
         }
-        let d0 = trip.sortedDays[0]
-        d0.timelineItems.append(TimelineItem(time: "14:30", title: "Sagrada Família", address: "C/ de Mallorca 401", sortOrder: 0))
-        d0.timelineItems.append(TimelineItem(time: "--:--", title: "Check-out", sortOrder: 1))
-        d0.timelineItems.append(TimelineItem(time: "09:00", title: "Casa Batlló", sortOrder: 2))
+        let days = trip.sortedDays
+        let flight = TransportInfo(type: .flight, detail: "VY6201", from: "Geneva", to: "Barcelona",
+                                   departureTime: "08:05", arrivalTime: "09:45")
+        days[0].transports.append(flight)
+        days[0].timelineItems.append(TimelineItem(time: "08:05", title: "Geneva → Barcelona", type: .flight, linkedId: flight.id, sortOrder: 0))
+        days[0].timelineItems.append(TimelineItem(time: "14:30", title: "Sagrada Família", address: "C/ de Mallorca 401", sortOrder: 1))
+        days[0].timelineItems.append(TimelineItem(time: "--:--", title: "Check-in · Hotel <Arts>", isDone: true, sortOrder: 2))
+        days[0].destinations.append(Destination(name: "Sagrada Família", type: .attraction, time: "14:30-16:00",
+                                                address: "C/ de Mallorca 401", ticketPrice: "€36", notes: "Tower tickets"))
+        days[0].accommodation = Accommodation(name: "Hotel Arts", address: "Marina 19", isCheckIn: true)
+        days[1].accommodation = Accommodation(name: "Hotel Arts", address: "Marina 19")
         trip.infoItems.append(InfoItem(title: "Passport", details: "E12345678"))
+        return trip
+    }
 
-        let text = TripShareText.make(trip)
-        let lines = text.components(separatedBy: "\n")
+    @Test func documentHasTablesAndDaysButNoInfo() throws {
+        let doc = TripExport.document(for: makeSpain(try makeContext()))
+        #expect(doc.title == "🇪🇸 Spain")
+        #expect(doc.glance.rows.count == 3)
+        #expect(doc.glance.rows[0][0] == "D1" && doc.glance.rows[0][2] == "Barcelona")
+        let transport = try #require(doc.transport)
+        #expect(transport.rows == [[doc.glance.rows[0][1], "✈️ Flight", "Geneva → Barcelona", "08:05", "09:45", "VY6201"]])
+        let hotels = try #require(doc.hotels)
+        #expect(hotels.rows.count == 1)
+        #expect(hotels.rows[0][0] == "Hotel Arts" && hotels.rows[0][3] == "2")
+        #expect(doc.days[0].timeline.map(\.time) == ["08:05", "14:30", nil])
+        #expect(doc.days[0].timeline[2].done)
+        #expect(doc.days[0].places.first?.details.contains("Ticket €36") == true)
+        #expect(doc.days[2].timeline.isEmpty)
 
-        #expect(lines[0] == "🇪🇸 Spain")
-        #expect(text.contains("Day 1 · \(fmtDate(trip.sortedDays[0].date)) · Barcelona"))
-        #expect(text.contains("Gaudí day"))
-        // Time order, untimed last, address under its item.
-        let batllo = try #require(lines.firstIndex(of: "  • 09:00  Casa Batlló"))
-        let sagrada = try #require(lines.firstIndex(of: "  • 14:30  Sagrada Família"))
-        let checkout = try #require(lines.firstIndex(of: "  • Check-out"))
-        #expect(batllo < sagrada && sagrada < checkout)
-        #expect(lines[sagrada + 1] == "    📍 C/ de Mallorca 401")
-        #expect(text.contains("Day 2 · "))
-        #expect(!text.contains("E12345678"))
-        #expect(!text.contains("Passport"))
+        let md = TripExport.markdown(doc)
+        #expect(!md.contains("E12345678") && !md.contains("Passport"))
+    }
+
+    @Test func markdownStructure() throws {
+        let md = TripExport.markdown(TripExport.document(for: makeSpain(try makeContext())))
+        #expect(md.hasPrefix("# 🇪🇸 Spain\n"))
+        #expect(md.contains("## Itinerary at a Glance"))
+        #expect(md.contains("| Day | Date | City | Plan |"))
+        #expect(md.contains("Gaudí \\| day"))                 // pipes escaped inside tables
+        #expect(md.contains("## Transport") && md.contains("## Hotels"))
+        #expect(md.contains("- **08:05** Geneva → Barcelona"))
+        #expect(md.contains("  - 📍 C/ de Mallorca 401"))
+        #expect(md.contains("- [x] Check-in · Hotel <Arts>"))
+        #expect(md.contains("- **Sagrada Família** · 🏛️ Attraction · 14:30-16:00 · Ticket €36"))
+    }
+
+    @Test func htmlEscapesAndPdfRenders() throws {
+        let trip = makeSpain(try makeContext())
+        let html = TripExport.html(TripExport.document(for: trip))
+        #expect(html.contains("Hotel &lt;Arts&gt;"))
+        #expect(!html.contains("Hotel <Arts>"))
+        #expect(html.contains("#2196F3"))
+
+        let pdf = TripExport.pdf(html: html, footer: "🇪🇸 Spain")
+        #expect(pdf.count > 5_000)
+        #expect(String(decoding: pdf.prefix(5), as: UTF8.self) == "%PDF-")
+        if let out = ProcessInfo.processInfo.environment["TRAVELTIPS_EXPORT_DIR"] {
+            try pdf.write(to: URL(fileURLWithPath: out).appending(path: "sample.pdf"))
+            try TripExport.markdown(TripExport.document(for: trip)).write(
+                to: URL(fileURLWithPath: out).appending(path: "sample.md"), atomically: true, encoding: .utf8)
+        }
+    }
+
+    /// Exports every trip from a copy of a real store (TRAVELTIPS_EXPORT_STORE = folder
+    /// with default.store*) into TRAVELTIPS_EXPORT_DIR. Skipped unless both are set.
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["TRAVELTIPS_EXPORT_STORE"] != nil
+                   && ProcessInfo.processInfo.environment["TRAVELTIPS_EXPORT_DIR"] != nil))
+    func exportRealStore() throws {
+        let env = ProcessInfo.processInfo.environment
+        let src = URL(fileURLWithPath: env["TRAVELTIPS_EXPORT_STORE"]!)
+        let dir = FileManager.default.temporaryDirectory.appending(path: "export-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        for name in StoreSetup.storeFiles where FileManager.default.fileExists(atPath: src.appending(path: name).path) {
+            try FileManager.default.copyItem(at: src.appending(path: name), to: dir.appending(path: name))
+        }
+        let schema = Schema(versionedSchema: SchemaV2.self)
+        let container = try ModelContainer(for: schema, migrationPlan: TravelTipsMigrationPlan.self,
+                                           configurations: ModelConfiguration(schema: schema, url: dir.appending(path: "default.store")))
+        let out = URL(fileURLWithPath: env["TRAVELTIPS_EXPORT_DIR"]!)
+        for trip in try ModelContext(container).fetch(FetchDescriptor<Trip>()) {
+            let doc = TripExport.document(for: trip)
+            try TripExport.pdf(html: TripExport.html(doc), footer: trip.name)
+                .write(to: out.appending(path: TripExport.fileName(for: trip, ext: "pdf")))
+            try TripExport.markdown(doc).write(to: out.appending(path: TripExport.fileName(for: trip, ext: "md")),
+                                               atomically: true, encoding: .utf8)
+        }
+    }
+
+    @Test func fileNameStripsUnsafeCharacters() throws {
+        let ctx = try makeContext()
+        let t = Trip(name: "Paris/Rome: 2026?", emoji: "🇫🇷", startDate: .now, endDate: .now)
+        ctx.insert(t)
+        #expect(TripExport.fileName(for: t, ext: "pdf") == "ParisRome 2026.pdf")
     }
 }
 

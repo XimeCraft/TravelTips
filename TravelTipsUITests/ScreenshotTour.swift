@@ -41,6 +41,15 @@ final class ScreenshotTour: XCTestCase {
         _ = app.staticTexts[L("TODAY", "今天")].firstMatch.waitForExistence(timeout: 3)
         snap(app, "02-overview")
 
+        // Share menu (PDF / Markdown).
+        let share = app.buttons[L("Share itinerary", "分享行程")].firstMatch
+        if share.waitForExistence(timeout: 3) {
+            share.tap()
+            _ = app.buttons[L("Share as PDF", "分享为 PDF")].firstMatch.waitForExistence(timeout: 3)
+            snap(app, "02a-share-menu")
+            app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.95)).tap()   // dismiss
+        }
+
         // Trip form with the color palette.
         let edit = app.buttons[L("Edit trip", "编辑行程")].firstMatch
         if edit.waitForExistence(timeout: 3) {
