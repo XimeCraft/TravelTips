@@ -22,6 +22,8 @@ struct TripFormSheet: View {
     @State private var colorHex: String
     @State private var startDate: Date
     @State private var endDate: Date
+    @State private var pendingRemoval: [TripDay] = []
+    @State private var showRemovalConfirm = false
 
     private let quickEmojis = ["🇨🇳","🇳🇿","🇸🇬","🇯🇵","🇰🇷","🇺🇸","🇬🇧","🇫🇷","🇩🇪","🇮🇹",
                                "🇪🇸","🇹🇭","🇦🇪","🇪🇬","🇲🇦","🇹🇷","🇬🇷","🇵🇹","🇦🇺","✈️","🏖️","🏔️","🗺️","🧳"]
@@ -44,13 +46,26 @@ struct TripFormSheet: View {
                     SheetField(label: "Trip Name", text: $name, placeholder: "e.g. Egypt")
                     emojiField
                     colorField
-                    if editing == nil { dateFields }
+                    dateFields
 
                     SheetSaveButton(label: editing == nil ? "Create Trip" : "Save") { save() }
                         .disabled(trimmedName.isEmpty)
                         .opacity(trimmedName.isEmpty ? 0.5 : 1)
                 }
                 .padding(20)
+            }
+            .confirmationDialog(
+                "Remove \(pendingRemoval.count) day\(pendingRemoval.count == 1 ? "" : "s") from the trip?",
+                isPresented: $showRemovalConfirm,
+                titleVisibility: .visible
+            ) {
+                Button("Remove Days", role: .destructive) { commitEdit() }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text(removalMessage)
+            }
+            .onChange(of: startDate) { _, newStart in
+                if endDate < newStart { endDate = newStart }
             }
             .navigationTitle(editing == nil ? "New Trip" : "Edit Trip")
             .navigationBarTitleDisplayMode(.inline)
@@ -160,24 +175,44 @@ struct TripFormSheet: View {
         let finalEmoji = emoji.trimmingCharacters(in: .whitespaces).isEmpty ? "✈️" : emoji
 
         if let editing {
-            editing.name = trimmedName
-            editing.emoji = finalEmoji
-            editing.colorHex = colorHex
-            dismiss()
+            let removing = TripDates.daysToRemove(from: editing, start: startDate, end: endDate)
+            if removing.contains(where: \.hasContent) {
+                pendingRemoval = removing
+                showRemovalConfirm = true
+            } else {
+                commitEdit()
+            }
             return
         }
 
+        let cal = Calendar.current
         let trip = Trip(name: trimmedName, emoji: finalEmoji,
-                        startDate: startDate, endDate: endDate, colorHex: colorHex)
-        let calendar = Calendar.current
-        var current = startDate
-        var sortOrder = 0
-        while current <= endDate {
-            trip.days.append(TripDay(date: current, city: "", summary: "", sortOrder: sortOrder))
-            current = calendar.date(byAdding: .day, value: 1, to: current) ?? endDate.addingTimeInterval(86400)
-            sortOrder += 1
+                        startDate: cal.startOfDay(for: startDate), endDate: cal.startOfDay(for: endDate),
+                        colorHex: colorHex)
+        for (i, date) in TripDates.dayStarts(from: startDate, to: endDate).enumerated() {
+            trip.days.append(TripDay(date: date, city: "", summary: "", sortOrder: i))
         }
         modelContext.insert(trip)
         dismiss()
+    }
+
+    private func commitEdit() {
+        guard let editing else { return }
+        editing.name = trimmedName
+        editing.emoji = emoji.trimmingCharacters(in: .whitespaces).isEmpty ? "✈️" : emoji
+        editing.colorHex = colorHex
+        let cal = Calendar.current
+        if !cal.isDate(editing.startDate, inSameDayAs: startDate) || !cal.isDate(editing.endDate, inSameDayAs: endDate) {
+            TripDates.apply(to: editing, start: startDate, end: endDate, context: modelContext)
+        }
+        dismiss()
+    }
+
+    private var removalMessage: String {
+        let withContent = pendingRemoval.filter(\.hasContent)
+        let lines = withContent.prefix(5).map { "\(fmtDate($0.date)): \($0.contentSummary)" }
+        var text = lines.joined(separator: "\n")
+        if withContent.count > 5 { text += "\n…and \(withContent.count - 5) more" }
+        return text + "\n\nEverything on these days, including attachments, will be deleted."
     }
 }
