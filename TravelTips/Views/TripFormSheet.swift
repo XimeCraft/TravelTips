@@ -24,6 +24,7 @@ struct TripFormSheet: View {
     @State private var endDate: Date
     @State private var pendingRemoval: [TripDay] = []
     @State private var showRemovalConfirm = false
+    @State private var pendingShift: Int? = nil
 
     private let quickEmojis = ["🇨🇳","🇳🇿","🇸🇬","🇯🇵","🇰🇷","🇺🇸","🇬🇧","🇫🇷","🇩🇪","🇮🇹",
                                "🇪🇸","🇹🇭","🇦🇪","🇪🇬","🇲🇦","🇹🇷","🇬🇷","🇵🇹","🇦🇺","✈️","🏖️","🏔️","🗺️","🧳"]
@@ -63,6 +64,24 @@ struct TripFormSheet: View {
                 Button("Cancel", role: .cancel) {}
             } message: {
                 Text(removalMessage)
+            }
+            .confirmationDialog(
+                shiftTitle,
+                isPresented: Binding(get: { pendingShift != nil }, set: { if !$0 { pendingShift = nil } }),
+                titleVisibility: .visible
+            ) {
+                Button("Move Everything") {
+                    if let days = pendingShift, let editing { TripDates.shift(editing, byDays: days) }
+                    pendingShift = nil
+                    commitEdit()
+                }
+                Button("Only Change the Dates", role: .destructive) {
+                    pendingShift = nil
+                    resizeOrConfirm()
+                }
+                Button("Cancel", role: .cancel) { pendingShift = nil }
+            } message: {
+                Text("Move keeps every day's plans, hotels and transport and shifts them with the trip. Only changing the dates removes the days that fall outside the new range.")
             }
             .onChange(of: startDate) { _, newStart in
                 if endDate < newStart { endDate = newStart }
@@ -175,12 +194,10 @@ struct TripFormSheet: View {
         let finalEmoji = emoji.trimmingCharacters(in: .whitespaces).isEmpty ? "✈️" : emoji
 
         if let editing {
-            let removing = TripDates.daysToRemove(from: editing, start: startDate, end: endDate)
-            if removing.contains(where: \.hasContent) {
-                pendingRemoval = removing
-                showRemovalConfirm = true
+            if let offset = TripDates.shiftOffset(for: editing, start: startDate, end: endDate) {
+                pendingShift = offset
             } else {
-                commitEdit()
+                resizeOrConfirm()
             }
             return
         }
@@ -194,6 +211,23 @@ struct TripFormSheet: View {
         }
         modelContext.insert(trip)
         dismiss()
+    }
+
+    /// Resize path: confirm first if days with content would be removed.
+    private func resizeOrConfirm() {
+        guard let editing else { return }
+        let removing = TripDates.daysToRemove(from: editing, start: startDate, end: endDate)
+        if removing.contains(where: \.hasContent) {
+            pendingRemoval = removing
+            showRemovalConfirm = true
+        } else {
+            commitEdit()
+        }
+    }
+
+    private var shiftTitle: Text {
+        let days = pendingShift ?? 0
+        return days > 0 ? Text("Move the trip \(days) days later?") : Text("Move the trip \(-days) days earlier?")
     }
 
     private func commitEdit() {

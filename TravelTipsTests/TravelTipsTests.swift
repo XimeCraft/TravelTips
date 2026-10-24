@@ -380,3 +380,35 @@ struct PackingResetTests {
         #expect(a.notes == "in bag" && a.tag == "证件" && b.quantity == 5)
     }
 }
+
+@MainActor
+struct TripShiftTests {
+    let cal = Calendar.current
+    func d(_ day: Int) -> Date { cal.date(from: DateComponents(year: 2026, month: 3, day: day))! }
+
+    @Test func offsetOnlyWhenLengthUnchanged() throws {
+        let ctx = try makeContext()
+        let (trip, _, _) = TripDatesTests().makeTrip(ctx)          // Mar 10–14, 5 days
+        #expect(TripDates.shiftOffset(for: trip, start: d(12), end: d(16)) == 2)
+        #expect(TripDates.shiftOffset(for: trip, start: d(7), end: d(11)) == -3)
+        #expect(TripDates.shiftOffset(for: trip, start: d(10), end: d(14)) == nil)   // unchanged
+        #expect(TripDates.shiftOffset(for: trip, start: d(10), end: d(16)) == nil)   // resized
+    }
+
+    @Test func shiftMovesEveryDayAndKeepsContent() throws {
+        let ctx = try makeContext()
+        let (trip, flight, anchor) = TripDatesTests().makeTrip(ctx)
+        let before = trip.sortedDays.map { ($0.id, $0.dayKey) }
+
+        TripDates.shift(trip, byDays: 30)   // crosses into April
+
+        #expect(trip.startKey == "2026-04-09")
+        #expect(trip.endKey == "2026-04-13")
+        let after = trip.sortedDays
+        #expect(after.map(\.id) == before.map(\.0))
+        #expect(after.map(\.dayKey) == ["2026-04-09", "2026-04-10", "2026-04-11", "2026-04-12", "2026-04-13"])
+        #expect(after[4].transports.first?.id == flight.id)
+        #expect(after[0].accommodation?.id == anchor.id)
+        #expect(after[3].timelineItems.contains { $0.title == "Check-out" })
+    }
+}

@@ -105,6 +105,30 @@ enum TripDates {
         trip.endDate = calendar.startOfDay(for: end)
     }
 
+    /// Whole days from the trip's current start to `newStart` when the new range
+    /// has the same length and a different start — i.e. the user is moving the
+    /// trip rather than resizing it. Nil otherwise.
+    static func shiftOffset(for trip: Trip, start: Date, end: Date, calendar: Calendar = .current) -> Int? {
+        let oldStart = calendar.startOfDay(for: trip.startDate)
+        let newStart = calendar.startOfDay(for: start)
+        let oldLength = dayStarts(from: trip.startDate, to: trip.endDate, calendar: calendar).count
+        let newLength = dayStarts(from: start, to: end, calendar: calendar).count
+        guard oldLength == newLength,
+              let offset = calendar.dateComponents([.day], from: oldStart, to: newStart).day,
+              offset != 0 else { return nil }
+        return offset
+    }
+
+    /// Moves every day of the trip (and so everything on it) by `days`.
+    static func shift(_ trip: Trip, byDays days: Int) {
+        guard days != 0 else { return }
+        for day in trip.days {
+            if let key = DayKey.adding(days, to: day.dayKey) { day.dayKey = key }
+        }
+        if let key = DayKey.adding(days, to: trip.startKey) { trip.startKey = key }
+        if let key = DayKey.adding(days, to: trip.endKey) { trip.endKey = key }
+    }
+
     // MARK: Helpers
 
     private struct Stay {
