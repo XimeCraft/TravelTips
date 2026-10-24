@@ -1,6 +1,6 @@
 # MVP2 · 智能导入（Smart Import）
 
-> 状态：规划中。前置条件：1.x 的 C 组（日期模型修复）完成。
+> 状态（2026-10-24）：Phase 0 进行中。前置条件 1.x C 组已完成。进度汇总见 [ROADMAP-1.x.md](ROADMAP-1.x.md) 第 4 节。
 > 定位：探索性项目。目标是验证"PDF → 行程"在端侧能不能做到可用，顺带为后续的知识库 / Knowledge Bot 打底。
 > 相关：[ROADMAP-1.x.md](ROADMAP-1.x.md)
 
@@ -364,7 +364,7 @@ python3 tools/eval/extract_eval.py --model qwen3:4b
 
 **需要你决定的**
 
-1. 目标用户是否以中国大陆为主？决定模型路线。
+1. ~~目标用户是否以中国大陆为主？决定模型路线。~~ 已定：国行机用不了苹果端侧模型，默认走 Qwen3 via MLX（见 6.6）。
 2. 这个功能的最低 iOS 版本：26（Foundation Models）还是 17（自带模型）？
 3. 是否接受 1–3 GB 的模型下载？
 4. 产品名最终叫 TravelTips 还是 TripCard？影响 Share Extension 的显示名。

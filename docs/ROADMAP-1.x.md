@@ -1,113 +1,233 @@
-# TravelTips 1.x 功能完善计划
+# TravelTips 计划与进度
 
-> 版本约定：`v1.0` tag = 当前代码状态。1.x = 在 1.0 基础上完善功能，不以上线为目标。
-> MVP2（智能导入）见 [MVP2-smart-import.md](MVP2-smart-import.md)。
-> README 里历史上的 MVP1 / MVP2 / MVP3 指的是 1.0 内部的三个里程碑，与这里的 MVP2 不是一回事。
+> 最后更新：2026-10-24 收工时。
+> 这是总入口：现在做到哪、下次从哪开始、还有什么要决定，都看这一份。
+> MVP2（PDF 智能导入）的细节在 [MVP2-smart-import.md](MVP2-smart-import.md)。
+> README 里的 MVP1 / MVP2 / MVP3 是 1.0 内部的旧里程碑，和这里的 MVP2 不是一回事。
 
-## 排序原则
+---
 
-1. 按实现难度从低到高，先做能一小时内完成的，建立节奏。
-2. 所有要改 SwiftData 模型的事项集中在 C 组一次做完，只写一次迁移。
-3. 上线专属事项（图标、隐私清单、商店素材）单独放 F 组，什么时候想上线什么时候做。
-4. MVP2 依赖 C 组：导入功能要写日期和时间，必须先把日期模型修对。
+## 1. 现在到哪了
 
-## ⏭ 下次从这里开始（2026-10-24 收尾时记录）
+| 分组 | 内容 | 状态 |
+|------|------|------|
+| v1.0 | 冻结当时的代码，打 tag | ✅ 10-21 |
+| A 组 | 一小时内的小修 | ✅ 10-22 |
+| B 组 | 半天级功能，不改数据模型 | ✅ 10-24 |
+| C 组 | 数据模型升级与迁移 | ✅ 10-24，手机已迁移并核对 |
+| D 组 | 新功能 | ✅ 10-24，D6 只做了一半 |
+| 额外 | 自定义行程颜色、PDF 分享 | ✅ 10-24 |
+| **G 组** | **下次的待办（含两项需要改数据模型）** | ⏭ 未开始 |
+| E 组 | 质量 | ⏭ 未开始 |
+| F 组 | 上线专属 | 暂不做 |
+| MVP2 | PDF 智能导入 | Phase 0 进行中 |
 
-| ID | 事项 | 工作量 | 说明 |
-|----|------|--------|------|
-| G1 | 分享 PDF 时显示进度 | 2 h | **现象**：点分享后，生成 PDF 要等一两秒，期间界面没有任何反应，像卡住了。**原因**：PDF 是选好分享去处之后才在主线程生成的（`TripPDFFile` 的 `FileRepresentation`）。**做法**：分享按钮改成普通按钮，点击后先盖一层“正在生成 PDF… 3/6 页”的进度条（按页渲染，每页之间让出主线程刷新进度），生成完再弹系统分享面板，传入现成的 PDF 文件；生成期间可取消。顺便让分享面板的缩略图显示第一页 |
-| G2 | 打包清单按行程复制（D6 剩余部分）| 1 天 | **要改数据模型**：打包物品现在是全局共用的，要给 `PackingItem` 加所属行程（或做“清单模板 → 行程清单”两层），新建 `SchemaV3` 加迁移，旧的全局清单迁移为模板。按 C 组规则：先备份手机数据、模拟器里用真实数据跑迁移，核对后再装手机 |
-| G3 | iCloud 同步预留（C2 剩余部分）| 半天 | **要改数据模型**：所有关系改为可选并补反向关系（约 126 处调用）。只有决定开 iCloud 同步时才做，可以和 G2 合进同一次 `SchemaV3` 迁移 |
+**当前状态**
 
-G2 和 G3 都要改数据模型，如果都做，合成一次迁移，只装一次手机。
+- 分支 `develop`。到 `07c17fa` 为止的代码都已 push 到 GitHub，只有这份文档整理的提交还没 push。
+- 单元测试 49 个用例全部通过，Debug 和 Release 都能编译。
+- 手机上已经是 SchemaV2（日期存成日历日），数据核对无误。
 
-## A 组：一小时内的小修
+---
 
-> 逐条执行说明（含代码片段和验收）见 [TODO-A.md](TODO-A.md)。
+## 2. 下次从这里开始
 
-| ID | 事项 | 工作量 | 涉及文件 | 验收 |
-|----|------|--------|----------|------|
-| A1 | ✅ 删除行程二次确认 | 20 min | `Views/TripsListView.swift` | 滑动删除弹 confirmationDialog，确认后才级联删除 |
-| A2 | ✅ About 页版本号从 Bundle 读取，产品名统一 | 20 min | `Views/SettingsView.swift` | 显示 `CFBundleShortVersionString` + build；先决定叫 TravelTips 还是 TripCard |
-| A3 | ✅ 加 `NSCameraUsageDescription` | 10 min | `project.pbxproj` 的 `INFOPLIST_KEY_NSCameraUsageDescription` | 附件里点拍照不再闪退 |
-| A4 | ✅ Todo 页行程提醒对已结束行程显示错误 | 15 min | `Views/RemindersView.swift` | 已结束的行程不再显示 "is now!"，改为隐藏或 "ended" |
-| A5 | ✅ 只支持 iPhone 竖屏 | 10 min | `project.pbxproj`：`TARGETED_DEVICE_FAMILY = 1`，方向只留 Portrait | 横屏和 iPad 不再出现错位的自定义 TabBar |
-| A6 | ✅ 行程列表空状态 | 30 min | `Views/TripsListView.swift` | 没有行程时显示引导文案和一个"创建行程"按钮 |
+按顺序做。前三项来自 10-24 收工时的记录。
 
-## B 组：半天级别，不改数据模型
+| 顺序 | ID | 事项 | 工作量 | 说明 |
+|------|----|------|--------|------|
+| 1 | G1 | 分享 PDF 时显示进度 | 2 h | **你提的**。现在点分享后要等一两秒，期间没有任何反应，像卡住了。原因是 PDF 在选好分享去处之后才在主线程生成。做法：先盖一层“正在生成 PDF… 3/6 页”的进度条，按页渲染并更新进度，可取消；生成完再弹分享面板，面板缩略图显示第一页 |
+| 2 | E4 | 行程列表分“即将出发 / 已结束” | 1 h | 已结束的行程还排在“即将出发”下，而且显示成 “-215 天前”。分成两段，已结束的显示 “215 天前” |
+| 3 | E5 | 补上 Egypt 缺的 3/23 | 10 min | 范围 12 天但只有 11 天。在编辑表单把结束日改成 3/22 保存，再改回 3/23 保存即可 |
+| 4 | — | 决定是否要“导出时隐藏备注” | 30 min | PDF 会原样带出地点备注里的预订码、票码、订票人姓名。是否加一个开关，等你决定 |
+| 5 | G2 | 打包清单按行程复制（D6 剩下的一半） | 1 天 | **要改数据模型**。打包物品现在所有行程共用，要加上“属于哪个行程”（或做“清单模板 → 行程清单”两层），新建 SchemaV3 迁移，旧清单转成模板 |
+| 6 | G3 | iCloud 同步预留（C2 剩下的一半） | 半天 | **要改数据模型**。所有关系改成可选并补反向关系，约 126 处代码。只有决定开 iCloud 时才做，和 G2 合成一次迁移 |
+| 7 | E1 | 补单元测试 | 1 天 | 还没覆盖：交通换日、酒店按晚生成和入住退房条目、linkedId 级联删除 |
+| 8 | E3 | 无障碍标签 | 半天 | 图标按钮加 `accessibilityLabel`，部分已在 D 组补上 |
+| 9 | E2 | 动态字体 | 1–2 天 | 约 166 处固定字号换成可缩放的写法 |
+| 10 | MVP2 | Phase 0 继续 | 1 周 | 见第 4 节 |
 
-| ID | 事项 | 工作量 | 说明 |
-|----|------|--------|------|
-| B1 | ✅ 附件级联清理 | 2–3 h | 新增 `AttachmentStore.deleteAll(linkedTo: [UUID])`，删除 Transport / Hotel / Place / Info / Trip 时调用，同时删 `Documents/attachments/` 里的文件。删 Trip 时要先收集所有子对象的 id |
-| B2 | ✅ 错误提示 | 2 h | 附件保存失败、文件不存在、相机不可用时弹 alert，替换现在的 `try?` 静默失败 |
-| B3 | ✅ 行程基本信息编辑 | 半天 | 名称、emoji、颜色（`Trip.colorHex` 已存在但 UI 没用到）。在行程总览页加编辑入口 |
-| B4 | ✅ 行程日期编辑 | 半天–1 天 | 延长：按日追加 `TripDay`；缩短：被删掉的天如果有数据，先弹确认再级联删除 |
-| B5 | ✅ 种子数据只在 Debug 下生效 | 1 h | `seedIfNeeded` / `seedPackingIfNeeded` 包在 `#if DEBUG`，Release 走 A6 的空状态。打包清单的个人条目一并清掉 |
-| B6 | ✅ 时间输入改用时间选择器 | 2 h | Transport / Place / Timeline 的时间字段仍存 `String`，但 UI 用 `DatePicker(.hourAndMinute)` 写入统一的 `"HH:mm"`；加一个容错解析函数 `parseHHmm(_:) -> Int?` 供排序用。不改 schema |
-| B7 | ✅ Daily 时间轴按时间自动排序 | 2 h | 依赖 B6。有合法时间的按时间排，没有的按 `sortOrder` 排在后面 |
+**改数据模型的规则（G2、G3 必须遵守）**
 
-## C 组：数据模型升级（集中一次做，一次迁移）
+1. 先从手机备份数据（方法见第 6 节）。
+2. 新建 `SchemaV3`，把 V2 原样冻结，加迁移步骤。
+3. 用最新的手机备份跑真实库迁移测试，核对每张表数量。
+4. 在模拟器里用备份数据真实启动一次，确认正常。
+5. 最后才装到手机，装完再拷回来核对一次。
 
-> 已完成（commit e339381）。手机上的真实数据已备份在 `~/Documents/TravelTips-Backups/`，迁移已用这份数据在单元测试和模拟器真实启动两种方式下验证，数量逐项一致。
+---
 
-| ID | 事项 | 状态与说明 |
-|----|------|------------|
-| C0 | ✅ Schema 版本化 | `SchemaV1`（冻结，勿改）+ `SchemaV2` + `TravelTipsMigrationPlan`。**调整**：保留"打不开就挪走"的兜底，但改为先自动复制一份 `StoreBackups/pre-v2`，失败时挪到 `failed-<时间>` 并弹出恢复提示，绝不删除 |
-| C1 | ✅ 日期跨时区修复 | 存 `startKey` / `endKey` / `dayKey`（`"yyyy-MM-dd"`），`startDate` / `endDate` / `date` 改为按当前时区计算。迁移按**迁移那一刻设备的时区**把旧时间点换算成日历日，所以首次在手机上安装 V2 时，手机时区应为规划行程时的时区（中国） |
-| C2 | ✅ 部分完成：CloudKit 预留 | 已去掉 `@Attribute(.unique)`、所有属性有默认值。**未做**：关系改可选 + 反向关系（约 126 处调用，且有"可选数组 append 静默失效"风险）。开 iCloud 时再做，届时是一次不改数据内容的轻量迁移 |
-| C3 | ✅ 迁移测试 | 合成 V1 库迁移测试常驻；真实库测试需传 `TEST_RUNNER_TRAVELTIPS_STORE_FIXTURE=<含 default.store 的目录>`，不传则跳过 |
+## 3. 等你决定的事
 
-**以后每次改模型的规则**：新建 `SchemaV3`，把 V2 原样冻结，加迁移 stage，用最新的手机备份跑真实库测试，通过后才装手机。
+| 事项 | 影响 | 现状 |
+|------|------|------|
+| PDF 导出要不要隐藏备注 | 分享给别人时会不会带出票码、预订号 | 目前全部导出 |
+| 要不要做 iCloud 同步 | 决定 G3 做不做 | 未决定 |
+| 设置页的调试卡片 | 只在 Xcode 装的版本出现，正式版没有 | 保留，可以改成折叠或隐藏 |
+| 产品名 TravelTips 还是 TripCard | 关于页、分享扩展的显示名 | 关于页现在读包名，显示 TravelTips |
+| MVP2：导入功能最低 iOS 版本 | 26 才有苹果端侧模型，17 要自带模型 | 未决定 |
+| MVP2：是否接受 1–3 GB 模型下载 | 决定用 Qwen3-4B 还是 1.7B | 未决定 |
+| ~~MVP2：目标用户是否以中国大陆为主~~ | ~~决定模型路线~~ | 已定：国行机用不了苹果端侧模型，默认走 Qwen3 via MLX |
 
-## D 组：新功能
+---
 
-> 已完成（2026-10-24）。界面效果用 `TravelTipsUITests/ScreenshotTour` 在模拟器里截图验证，中英文各跑一遍。
+## 4. MVP2 · PDF 智能导入
 
-| ID | 事项 | 状态与说明 |
-|----|------|------------|
-| D1 | ✅ 本地通知 | 行程前一天 20:00、行程中每天 08:00（当地时间）推送当天安排。只排最近 60 条（iOS 上限 64）。打开或切出 App 时重排，重排排队执行防止竞争。开关默认关闭，打开时才申请权限 |
-| D2 | ✅ 简体中文 | **调整**：不在 App 内切换语言，改用 iOS 的“按 App 设置语言”（设置 → TravelTips → 语言），文字、日期格式、通知全部跟随。设置页的语言行显示当前语言并跳转到系统设置。新文字的翻译用 `tools/i18n/add_translations.py` 合并进 `Localizable.xcstrings` |
-| D3 | ✅ 总览定位到今天 | 行程进行中时自动滚到今天，边框、徽章、TODAY 标签用行程色 |
-| D4 | ✅ 行程主色 | 返回按钮、总览徽章、今天高亮、行程内 tab 栏选中色 |
-| D5 | ✅ 分享行程 | 纯文本，按天列出日期、城市、概要、时间轴和地址。**不含 Info**（可能有护照号等）。PDF 版未做 |
-| D6 | ✅ 部分完成：打包清单 | 做了“一键取消全部勾选”。“按行程复制清单”需要把打包物品挂到行程上，要改数据模型，留到以后 |
-| D7 | ✅ 整体平移行程 | 天数不变、起始日期变化时，询问“整体平移”还是“只修改日期” |
+详细设计在 [MVP2-smart-import.md](MVP2-smart-import.md)。
 
-## E 组：质量
+| Phase | 内容 | 状态 |
+|-------|------|------|
+| 0 | 研究：语料、评测、选模型 | 进行中 |
+| 1 | 抽取原型 | 未开始，前置条件 C 组已满足 |
+| 2 | 映射引擎（PDF 内容 → 行程数据） | 未开始 |
+| 3 | 导入界面、确认页、分享扩展 | 未开始 |
+| 4 | 扩展：自带 API key、截图导入 | 按需 |
+| 5 | 研究：行程知识库 / 问答 | 以后 |
 
-| ID | 事项 | 工作量 | 说明 |
-|----|------|--------|------|
-| E1 | 核心逻辑单元测试 | 1–2 天 | 已有 28 个：附件清理、时间解析、时间轴排序、日期增减与酒店重锚。还需覆盖：linkedId 级联删除、酒店按晚生成 + 入住/退房 TimelineItem、交通换日、C1 的日期 helper。用内存 `ModelContainer` |
-| E2 | Dynamic Type | 1–2 天 | 166 处 `.system(size:)` 换成语义字体或 `@ScaledMetric` |
-| E3 | 无障碍标签 | 半天 | emoji 按钮和图标按钮加 `accessibilityLabel` |
-| E4 | 行程列表小问题 | 1 h | 已结束的行程仍在 UPCOMING 标题下；倒计时显示成 “-215 days ago”（负号和 ago 重复）。建议分 Upcoming / Past 两段，Past 显示 “215 days ago” |
-| E5 | Egypt 行程缺最后一天 | 10 min | 范围 3/12–3/23 共 12 天，但只有 11 个 TripDay（缺 3/23）。在编辑表单把结束日期改到 3/22 保存，再改回 3/23 保存即可补上；或在 History 功能里统一校验 |
+**Phase 0 已完成**
 
-## F 组：上线专属（想上线时再做）
+- ✅ 查清苹果端侧模型在中国大陆的情况：国行机目前不能用，预计 12 月 iOS 27.3 上线，开发者接口是否开放未知。
+- ✅ 写了 Mac 上的评测脚本，放在 `tools/eval/extract_eval.py`，附 5 份模拟订单。
+- ✅ 用 Qwen3-4B 和 1.7B 跑了第一轮：4B 关键字段正确率 90–95%，可以当主力；1.7B 约 75%，只能做低内存机型的降级。
+- ✅ 总结出三条 schema 规则：所有字段必填但允许为空；日期和时间用正则约束；字段名要能看出含义。
 
-| ID | 事项 | 工作量 |
-|----|------|--------|
-| F1 | App 图标 1024×1024 | 1 h |
-| F2 | `PrivacyInfo.xcprivacy`：声明 UserDefaults（CA92.1） | 20 min |
-| F3 | `ITSAppUsesNonExemptEncryption = NO` | 5 min |
-| F4 | 部署目标降到 17.0（确认没用 18 专属 API） | 10 min |
-| F5 | 隐私政策页面、商店截图、描述 | 1 天 |
-| F6 | TestFlight 内测 | 持续 |
+**Phase 0 还剩**
 
-## 建议执行顺序
+- 收集 20–30 份真实订单 PDF，脱敏后手写标准答案。
+- 评测脚本加上 PDF 抽文本和自动打分。
+- 再测 Gemma 3n，和 Haiku 做对照。
+- 在真机上用 MLX 测 4B 的速度和内存。
+- 写决策备忘。
 
+---
+
+## 5. 已完成明细
+
+### 10-21 · v1.0 和规划
+
+| 提交 | 内容 |
+|------|------|
+| `9b68a38` | 打包页、时间轴地址、数据库打不开时备份而不是删除 → 打 tag `v1.0` |
+| `b5afeb8` | 写路线图和 MVP2 计划 |
+| — | MVP2 Phase 0：查证大陆可用性、本地模型评测、设置页加端侧模型检测卡片（`6933b52`，10-22 提交） |
+
+### 10-22 · A 组
+
+| 提交 | ID | 内容 |
+|------|----|------|
+| `c65de76` | A1 | 删除行程前二次确认 |
+| `d84acd5` | A2 | 关于页的名称和版本号从包里读 |
+| `259be97` | A3 | 相机权限说明，拍照不再闪退 |
+| `3b71aac` | A4 | 待办页不再对已结束行程显示“进行中”，加空状态 |
+| `3670d1b` | A5 | 只支持 iPhone 竖屏 |
+| `8ff8943` | A6 | 行程列表空状态和“创建行程”按钮 |
+
+### 10-24 · B 组
+
+| 提交 | ID | 内容 |
+|------|----|------|
+| `5234613` | B1 | 删除行程、交通、酒店、地点、信息时一起删附件；编辑酒店不再丢附件 |
+| `7f55c65` | B2 | 附件导入失败、文件丢失、没有相机时弹提示 |
+| `75f42b3` | B5 | 示例数据只在 Debug 版写入；去掉打包清单里的个人条目 |
+| `c11473a` | B6 | 时间改用选择器；地点支持时间段和“全天” |
+| `146c27e` | B7 | 每日时间轴按时间排序 |
+| `78fa466` | B3 | 编辑行程名称、emoji、颜色 |
+| `a8d5c00` | B4 | 编辑行程日期，删除有内容的日期前先确认 |
+
+### 10-24 · C 组：数据模型升级
+
+| 提交 | ID | 内容 |
+|------|----|------|
+| `e339381` | C0 | 模型版本化：V1 冻结，V2 为当前；首次升级前自动复制数据库；打不开时保留原库并提示 |
+| 同上 | C1 | 日期改存日历日，换时区不再错一天（Japan 行程在日本曾显示晚一天） |
+| 同上 | C2 | 去掉唯一约束、字段加默认值。关系改可选没做，见 G3 |
+| 同上 | C3 | 迁移测试：合成数据加你手机的真实数据，数量逐项一致 |
+| — | — | 手机已装 V2 并核对：3 个行程、27 天、79 条时间轴，全部一致 |
+
+### 10-24 · D 组
+
+| 提交 | ID | 内容 |
+|------|----|------|
+| `244ab8a` | D3 | 行程进行中时，总览自动滚到今天并高亮 |
+| `4f6ca90` | D1 | 行程提醒通知：出发前一晚 20:00、行程中每天 08:00。开关默认关，打开时才申请权限 |
+| `92805c2` | D4 | 行程内的按钮、徽章、tab 栏用行程主色 |
+| `6c7b25f` | D2 | 简体中文。语言跟随 iOS 的“按 App 设置语言” |
+| `46cffa1` | D5 | 分享行程（纯文本版，后来被 PDF 取代） |
+| `8d5c0ed` | D6 | 打包清单一键取消全部勾选。按行程复制没做，见 G2 |
+| `d31307c` | D7 | 改日期时可选择整体平移，所有安排一起挪 |
+| `f7cbb32` | — | 补中文翻译，加翻译合并工具 |
+
+### 10-24 · 额外
+
+| 提交 | 内容 |
+|------|------|
+| `ec3a4da` | 自定义行程颜色：取色器、记住用过的颜色、长按删除；浅色自动保证文字可读 |
+| `bbf9097` | 分享改成排版过的 PDF：行程一览表、交通表、酒店表、每日卡片、页码 |
+| `ffa4653` | 去掉 Markdown 选项，只保留 PDF |
+| `07c17fa` | 记录下次待办 |
+
+---
+
+## 6. 工作方式备忘
+
+**位置**
+
+- 仓库：`/Users/xiao/Projects/github/AppleApp/IOSApp/TravelTips`，分支 `develop`。VSCode 默认打开的 `Projects/AppleApp/...` 是空壳目录。
+- 手机数据备份：`~/Documents/TravelTips-Backups/`，最新一份是 `2026-10-24-1513-phone-postV2`。
+- PDF 导出样例：`~/Documents/TravelTips-Exports/2026-10-24-samples/`。
+
+**常用命令**
+
+这台 Mac 的命令行工具指向 Command Line Tools，所以每条 `xcodebuild` 都要带 `DEVELOPER_DIR`。
+
+```bash
+cd /Users/xiao/Projects/github/AppleApp/IOSApp/TravelTips
+export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+
+# 编译
+xcodebuild -project TravelTips.xcodeproj -scheme TravelTips -sdk iphonesimulator \
+  -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build
+
+# 单元测试（iPhone 16 / iOS 18.4 模拟器）
+xcodebuild test -project TravelTips.xcodeproj -scheme TravelTips \
+  -destination 'id=A7841EE0-91A6-4E78-B05E-909FA46D50FB' -only-testing:TravelTipsTests \
+  CODE_SIGNING_ALLOWED=NO
+
+# 推送
+git push origin develop
 ```
-A1 → A2 → A3 → A4 → A5 → A6        （一个下午）
-B1 → B2 → B5 → B6 → B7 → B3 → B4   （两到三天）
-C0 → C1 → C2 → C3                   （两到三天，一个 PR）
-D3 → D1 → D4 → D2 → D5 → D6 → D7         （✅ 已完成）
-E1 → E3 → E2                        （穿插做）
----- 此时可以开始 MVP2 Phase 0 ----
-F 组                                （决定上线时）
+
+**从手机备份数据**（Xcode 的 Download Container 在这台机器上会报错，用这个）
+
+```bash
+B=~/Documents/TravelTips-Backups/$(date +%Y-%m-%d-%H%M)-phone
+for sub in Library Documents; do
+  xcrun devicectl device copy from --device 9027A0A1-EC78-5186-BFB5-BF2AB6D42EAB \
+    --domain-type appDataContainer --domain-identifier XimeCraft.TravelTips \
+    --source "$sub" --destination "$B/$sub"
+done
 ```
 
-## 不在 1.x 范围内
+**验证工具**
 
-- iCloud 同步正式开启（C2 做好后随时可开，但要处理冲突和多设备测试）
-- 行程模板、协作编辑
+| 工具 | 用途 | 怎么用 |
+|------|------|--------|
+| 截图巡检 `TravelTipsUITests/ScreenshotTour` | 在模拟器里自动点一遍，截下列表、总览、分享面板、编辑表单、设置页 | 测试命令加 `TEST_RUNNER_TRAVELTIPS_SCREENSHOT_TOUR=1`，中文再加 `TEST_RUNNER_TRAVELTIPS_TOUR_LANG=zh-Hans` |
+| 真实库迁移测试 | 用手机备份验证数据迁移 | 加 `TEST_RUNNER_TRAVELTIPS_STORE_FIXTURE=<含 default.store 的目录>` |
+| 真实库导出 PDF | 看真实行程导出的排版 | 加 `TEST_RUNNER_TRAVELTIPS_EXPORT_STORE=<目录>` 和 `TEST_RUNNER_TRAVELTIPS_EXPORT_DIR=<输出目录>`，中文加 `-testLanguage zh-Hans` |
+| 翻译合并 `tools/i18n/add_translations.py` | 把新文字的中文翻译补进字符串目录，不覆盖已有的 | 见脚本开头说明 |
+| 模型评测 `tools/eval/extract_eval.py` | MVP2 本地模型抽取评测 | `python3 tools/eval/extract_eval.py --model qwen3:4b` |
+
+**注意**
+
+- 模拟器里的数据是你手机数据的副本，其中 Spain 被挪到 10/20–10/31、颜色改成了浅黄，是为了测试“今天”和浅色效果，不影响手机。
+- 导出相关的测试按英文写断言，在中文环境下失败属于预期。
+
+---
+
+## 7. 不在近期范围
+
+- 正式开启 iCloud 同步（G3 做完后才具备条件，还要处理冲突和多设备测试）
+- 行程模板、多人协作
 - 地图视图
+- F 组上线事项：App 图标、隐私清单、加密声明、部署目标降到 17.0、商店素材、TestFlight
