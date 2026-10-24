@@ -117,3 +117,23 @@ struct TimeParsingTests {
         #expect(formatHHmm(1439) == "23:59")
     }
 }
+
+@MainActor
+struct TimelineSortTests {
+
+    @Test func timedItemsFirstInTimeOrderThenUntimedByInsertion() throws {
+        let ctx = try makeContext()
+        let day = TripDay(date: .now, city: "", summary: "", sortOrder: 0)
+        ctx.insert(day)
+        let specs: [(String, String)] = [
+            ("--:--", "checkout"), ("14:30", "museum"), ("All Day", "beach"),
+            ("08:00", "flight"), ("10:30-12:00", "tour"), ("08:00", "breakfast"),
+        ]
+        for (i, (time, title)) in specs.enumerated() {
+            day.timelineItems.append(TimelineItem(time: time, title: title, sortOrder: i))
+        }
+
+        #expect(day.sortedTimelineItems.map(\.title) ==
+                ["flight", "breakfast", "tour", "museum", "checkout", "beach"])
+    }
+}

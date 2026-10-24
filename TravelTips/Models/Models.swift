@@ -178,8 +178,17 @@ final class TripDay {
         destinations.sorted { $0.sortOrder < $1.sortOrder }
     }
 
+    /// Items with a readable time first, in time order; items without one
+    /// ("--:--", "All Day", free text) after them. Ties keep insertion order.
     var sortedTimelineItems: [TimelineItem] {
-        timelineItems.sorted { $0.sortOrder < $1.sortOrder }
+        timelineItems.sorted { a, b in
+            switch (parseHHmm(a.time), parseHHmm(b.time)) {
+            case let (ta?, tb?) where ta != tb: return ta < tb
+            case (_?, nil):                     return true
+            case (nil, _?):                     return false
+            default:                            return a.sortOrder < b.sortOrder
+            }
+        }
     }
 
     var firstTransport: TransportInfo? {
