@@ -25,7 +25,25 @@ private func fileSizeString(bytes: Int) -> String {
     ByteCountFormatter.string(fromByteCount: Int64(bytes), countStyle: .file)
 }
 
-private func saveFileAttachment(from url: URL, linkedItemId: UUID, context: ModelContext) {
+enum AttachmentError: LocalizedError {
+    case copyFailed(name: String, underlying: Error)
+    case writeFailed(underlying: Error)
+    case photoLoadFailed
+    case fileMissing(name: String)
+    case cameraUnavailable
+
+    var errorDescription: String? {
+        switch self {
+        case .copyFailed(let name, let err): return "Couldn't import \"\(name)\". \(err.localizedDescription)"
+        case .writeFailed(let err):          return "Couldn't save the photo. \(err.localizedDescription)"
+        case .photoLoadFailed:               return "Couldn't load the selected photo. If it is stored in iCloud, try again once it has downloaded."
+        case .fileMissing(let name):         return "\"\(name)\" is no longer on this device. Delete it and attach the file again."
+        case .cameraUnavailable:             return "The camera isn't available on this device."
+        }
+    }
+}
+
+private func saveFileAttachment(from url: URL, linkedItemId: UUID, context: ModelContext) throws {
     let accessing = url.startAccessingSecurityScopedResource()
     defer { if accessing { url.stopAccessingSecurityScopedResource() } }
 
@@ -33,7 +51,11 @@ private func saveFileAttachment(from url: URL, linkedItemId: UUID, context: Mode
     let fileName = UUID().uuidString + (ext.isEmpty ? "" : "." + ext)
     let destURL = attachmentsDir().appendingPathComponent(fileName)
 
-    guard (try? FileManager.default.copyItem(at: url, to: destURL)) != nil else { return }
+    do {
+        try FileManager.default.copyItem(at: url, to: destURL)
+    } catch {
+        throw AttachmentError.copyFailed(name: url.lastPathComponent, underlying: error)
+    }
 
     let bytes = (try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
     let fileType = ext == "pdf" ? "pdf" : "image"
@@ -47,10 +69,14 @@ private func saveFileAttachment(from url: URL, linkedItemId: UUID, context: Mode
     context.insert(att)
 }
 
-private func saveImageAttachment(data: Data, name: String, linkedItemId: UUID, context: ModelContext) {
+private func saveImageAttachment(data: Data, name: String, linkedItemId: UUID, context: ModelContext) throws {
     let fileName = UUID().uuidString + ".jpg"
     let destURL = attachmentsDir().appendingPathComponent(fileName)
-    guard (try? data.write(to: destURL)) != nil else { return }
+    do {
+        try data.write(to: destURL)
+    } catch {
+        throw AttachmentError.writeFailed(underlying: error)
+    }
 
     let att = Attachment(
         name: name,
@@ -129,6 +155,7 @@ struct AttachmentSectionView: View {
     @State private var showCamera = false
     @State private var photoPickerItem: PhotosPickerItem? = nil
     @State private var previewURL: URL? = nil
+    @State private var errorMessage: String? = nil
 
     private var attachments: [Attachment] {
         allAttachments.filter { $0.linkedItemId == linkedItemId }
@@ -167,7 +194,8 @@ struct AttachmentSectionView: View {
                             Button {
                                 showAddMenu = false
                                 if label == "Choose from Files" { showDocPicker = true }
-                                else { showCamera = true }
+                                else if UIImagePickerController.isSourceTypeAvailable(.camera) { showCamera = true }
+                                else { report(AttachmentError.cameraUnavailable) }
                             } label: {
                                 menuRow(icon: icon, label: label)
                             }
@@ -200,7 +228,14 @@ struct AttachmentSectionView: View {
             ForEach(attachments) { att in
                 AttachmentRow(
                     att: att,
-                    onTap: { previewURL = localURL(for: att.localPath) },
+                    onTap: {
+                        let url = localURL(for: att.localPath)
+                        if FileManager.default.fileExists(atPath: url.path) {
+                            previewURL = url
+                        } else {
+                            report(AttachmentError.fileMissing(name: att.name))
+                        }
+                    },
                     onDelete: {
                         AttachmentStore.deleteFile(for: att)
                         modelContext.delete(att)
@@ -211,27 +246,52 @@ struct AttachmentSectionView: View {
         .padding(.top, 8)
         .sheet(isPresented: $showDocPicker) {
             DocumentPickerView { url in
-                saveFileAttachment(from: url, linkedItemId: linkedItemId, context: modelContext)
+                do { try saveFileAttachment(from: url, linkedItemId: linkedItemId, context: modelContext) }
+                catch { report(error) }
             }
         }
         .fullScreenCover(isPresented: $showCamera) {
             CameraPickerView { data in
                 let name = "Photo_\(UUID().uuidString.prefix(8)).jpg"
-                saveImageAttachment(data: data, name: name, linkedItemId: linkedItemId, context: modelContext)
+                do { try saveImageAttachment(data: data, name: name, linkedItemId: linkedItemId, context: modelContext) }
+                catch { report(error) }
             }
             .ignoresSafeArea()
         }
         .onChange(of: photoPickerItem) { _, item in
             showAddMenu = false
+            guard let item else { return }
             Task {
-                if let data = try? await item?.loadTransferable(type: Data.self) {
+                do {
+                    guard let data = try await item.loadTransferable(type: Data.self) else {
+                        throw AttachmentError.photoLoadFailed
+                    }
                     let name = "Photo_\(UUID().uuidString.prefix(8)).jpg"
-                    saveImageAttachment(data: data, name: name, linkedItemId: linkedItemId, context: modelContext)
+                    try saveImageAttachment(data: data, name: name, linkedItemId: linkedItemId, context: modelContext)
+                } catch let error as AttachmentError {
+                    report(error)
+                } catch {
+                    report(AttachmentError.photoLoadFailed)
                 }
                 photoPickerItem = nil
             }
         }
         .quickLookPreview($previewURL)
+        .alert(
+            "Attachment",
+            isPresented: Binding(get: { errorMessage != nil }, set: { if !$0 { errorMessage = nil } })
+        ) {
+            Button("OK", role: .cancel) { errorMessage = nil }
+        } message: {
+            Text(errorMessage ?? "")
+        }
+    }
+
+    private func report(_ error: Error) {
+        let message = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+        // Errors often arrive while the file picker / camera is still dismissing;
+        // an alert presented mid-dismissal is silently dropped, so wait it out.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { errorMessage = message }
     }
 
     private func menuRow(icon: String, label: String) -> some View {
