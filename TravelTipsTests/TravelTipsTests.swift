@@ -363,3 +363,20 @@ struct TripShareTextTests {
         #expect(!text.contains("Passport"))
     }
 }
+
+@MainActor
+struct PackingResetTests {
+    @Test func clearsPackedButLeavesArchivedAndDetails() throws {
+        let ctx = try makeContext()
+        let a = PackingItem(name: "Passport", tag: "证件", quantity: 1, notes: "in bag", isPacked: true)
+        let b = PackingItem(name: "Socks", quantity: 5, isPacked: false)
+        let c = PackingItem(name: "Old charger", isPacked: true, isArchived: true)
+        [a, b, c].forEach(ctx.insert)
+
+        resetPacked([a, b, c])
+
+        #expect(!a.isPacked && !b.isPacked)
+        #expect(c.isPacked)                      // archived: untouched
+        #expect(a.notes == "in bag" && a.tag == "证件" && b.quantity == 5)
+    }
+}

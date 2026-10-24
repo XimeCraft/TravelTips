@@ -11,6 +11,7 @@ struct PackingTab: View {
     @State private var showAddSheet = false
     @State private var showArchive = false
     @State private var selectedItem: PackingItem? = nil
+    @State private var showResetConfirm = false
 
     private var items: [PackingItem] { allItems.filter { !$0.isArchived } }
     private var archivedCount: Int { allItems.filter { $0.isArchived }.count }
@@ -65,6 +66,19 @@ struct PackingTab: View {
             .scrollContentBackground(.hidden)
 
             HStack(spacing: 12) {
+                if packedCount > 0 {
+                    Button { showResetConfirm = true } label: {
+                        Image(systemName: "arrow.counterclockwise")
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundColor(Theme.primary)
+                            .frame(width: 30, height: 30)
+                            .background(Theme.primaryFaint)
+                            .cornerRadius(9)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(Text("Unpack all"))
+                }
+
                 Button { showArchive = true } label: {
                     Image(systemName: "archivebox")
                         .font(.system(size: 15, weight: .medium))
@@ -98,6 +112,14 @@ struct PackingTab: View {
         }
         .sheet(isPresented: $showArchive) {
             PackingArchiveView()
+        }
+        .confirmationDialog("Start packing again?", isPresented: $showResetConfirm, titleVisibility: .visible) {
+            Button("Unpack All \(packedCount) Items", role: .destructive) {
+                withAnimation { resetPacked(items) }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Clears every check mark so the list is ready for your next trip. Items, tags and notes stay.")
         }
         .sheet(item: $selectedItem) { item in
             PackingDetailView(item: item, tags: tags)
@@ -487,4 +509,13 @@ private func fieldLabel(_ text: LocalizedStringKey) -> some View {
         .foregroundColor(Theme.textSec)
         .textCase(.uppercase)
         .kerning(0.8)
+}
+
+// MARK: - Reset
+
+/// Clears the packed flag on `items`. Archived items are left untouched.
+func resetPacked(_ items: [PackingItem]) {
+    for item in items where !item.isArchived && item.isPacked {
+        item.isPacked = false
+    }
 }
