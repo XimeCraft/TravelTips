@@ -38,14 +38,16 @@
 
 ## C 组：数据模型升级（集中一次做，一次迁移）
 
-做之前先读 Apple 的 `VersionedSchema` / `SchemaMigrationPlan` 文档。顺序不能乱：C0 必须第一个。
+> 已完成（commit e339381）。手机上的真实数据已备份在 `~/Documents/TravelTips-Backups/`，迁移已用这份数据在单元测试和模拟器真实启动两种方式下验证，数量逐项一致。
 
-| ID | 事项 | 工作量 | 说明 |
-|----|------|--------|------|
-| C0 | Schema 版本化 | 半天 | 把当前模型冻结为 `SchemaV1`，建 `MigrationPlan`，`ModelContainer` 改用 `migrationPlan:`。去掉 `TravelTipsApp.swift` 里"打不开就挪走 store"的兜底 |
-| C1 | 日期跨时区修复 | 1 天 | `TripDay.date`、`Trip.startDate/endDate` 改为存日历日（推荐 `"yyyy-MM-dd"` 字符串 + 计算属性，或 `DateComponents`）。所有 `Calendar.current` 比较改走一个固定 UTC 日历的 helper。验收：把模拟器时区从 Asia/Shanghai 改到 America/New_York，行程日期不变 |
-| C2 | 为 CloudKit 预留结构 | 半天 | 去掉 `@Attribute(.unique)`，所有属性给默认值，关系全部可选。即使 1.x 不开同步也先改，以后开只需加 `cloudKitDatabase` |
-| C3 | 迁移测试 | 半天 | 用 1.0 的 store 文件做 fixture，跑 V1 → V2 迁移，验证数据完整 |
+| ID | 事项 | 状态与说明 |
+|----|------|------------|
+| C0 | ✅ Schema 版本化 | `SchemaV1`（冻结，勿改）+ `SchemaV2` + `TravelTipsMigrationPlan`。**调整**：保留"打不开就挪走"的兜底，但改为先自动复制一份 `StoreBackups/pre-v2`，失败时挪到 `failed-<时间>` 并弹出恢复提示，绝不删除 |
+| C1 | ✅ 日期跨时区修复 | 存 `startKey` / `endKey` / `dayKey`（`"yyyy-MM-dd"`），`startDate` / `endDate` / `date` 改为按当前时区计算。迁移按**迁移那一刻设备的时区**把旧时间点换算成日历日，所以首次在手机上安装 V2 时，手机时区应为规划行程时的时区（中国） |
+| C2 | ✅ 部分完成：CloudKit 预留 | 已去掉 `@Attribute(.unique)`、所有属性有默认值。**未做**：关系改可选 + 反向关系（约 126 处调用，且有"可选数组 append 静默失效"风险）。开 iCloud 时再做，届时是一次不改数据内容的轻量迁移 |
+| C3 | ✅ 迁移测试 | 合成 V1 库迁移测试常驻；真实库测试需传 `TEST_RUNNER_TRAVELTIPS_STORE_FIXTURE=<含 default.store 的目录>`，不传则跳过 |
+
+**以后每次改模型的规则**：新建 `SchemaV3`，把 V2 原样冻结，加迁移 stage，用最新的手机备份跑真实库测试，通过后才装手机。
 
 ## D 组：新功能
 
@@ -66,6 +68,8 @@
 | E1 | 核心逻辑单元测试 | 1–2 天 | 已有 28 个：附件清理、时间解析、时间轴排序、日期增减与酒店重锚。还需覆盖：linkedId 级联删除、酒店按晚生成 + 入住/退房 TimelineItem、交通换日、C1 的日期 helper。用内存 `ModelContainer` |
 | E2 | Dynamic Type | 1–2 天 | 166 处 `.system(size:)` 换成语义字体或 `@ScaledMetric` |
 | E3 | 无障碍标签 | 半天 | emoji 按钮和图标按钮加 `accessibilityLabel` |
+| E4 | 行程列表小问题 | 1 h | 已结束的行程仍在 UPCOMING 标题下；倒计时显示成 “-215 days ago”（负号和 ago 重复）。建议分 Upcoming / Past 两段，Past 显示 “215 days ago” |
+| E5 | Egypt 行程缺最后一天 | 10 min | 范围 3/12–3/23 共 12 天，但只有 11 个 TripDay（缺 3/23）。在编辑表单把结束日期改到 3/22 保存，再改回 3/23 保存即可补上；或在 History 功能里统一校验 |
 
 ## F 组：上线专属（想上线时再做）
 
