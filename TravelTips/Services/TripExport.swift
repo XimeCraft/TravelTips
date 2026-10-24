@@ -1,10 +1,9 @@
 import SwiftUI
 import UIKit
-import UniformTypeIdentifiers
 
-// MARK: - Trip export (PDF / Markdown)
+// MARK: - Trip export (PDF)
 //
-// One document model, two renderers. Info items are deliberately left out:
+// A document model rendered to HTML, then paginated into an A4 PDF. Info items are deliberately left out:
 // they often hold passport, insurance or booking numbers.
 
 struct TripDocument: Equatable {
@@ -142,74 +141,6 @@ enum TripExport {
     private static func clean(_ s: String?) -> String? {
         guard let t = s?.trimmingCharacters(in: .whitespacesAndNewlines), !t.isEmpty, t != noTimeSentinel else { return nil }
         return t
-    }
-
-    // MARK: Markdown
-
-    static func markdown(_ doc: TripDocument) -> String {
-        var md: [String] = []
-        md.append("# \(doc.title)")
-        md.append("")
-        md.append("*\(doc.subtitle)*")
-
-        func table(_ t: TripDocument.Table) {
-            md.append("")
-            md.append("| " + t.headers.map(mdCell).joined(separator: " | ") + " |")
-            md.append("|" + t.headers.map { _ in " --- " }.joined(separator: "|") + "|")
-            for row in t.rows { md.append("| " + row.map(mdCell).joined(separator: " | ") + " |") }
-        }
-
-        md.append("")
-        md.append("## " + String(localized: "Itinerary at a Glance"))
-        table(doc.glance)
-        if let t = doc.transport {
-            md.append("")
-            md.append("## " + String(localized: "Transport"))
-            table(t)
-        }
-        if let t = doc.hotels {
-            md.append("")
-            md.append("## " + String(localized: "Hotels"))
-            table(t)
-        }
-
-        md.append("")
-        md.append("## " + String(localized: "Day by Day"))
-        for day in doc.days {
-            md.append("")
-            md.append("### " + day.heading + (day.city.map { " · \($0)" } ?? ""))
-            if let s = day.summary {
-                md.append("")
-                md.append("> " + s.replacingOccurrences(of: "\n", with: "\n> "))
-            }
-            if !day.timeline.isEmpty {
-                md.append("")
-                for line in day.timeline {
-                    let box = line.done ? "[x] " : ""
-                    let time = line.time.map { "**\($0)** " } ?? ""
-                    md.append("- \(box)\(time)\(line.text)")
-                    if let a = line.address { md.append("  - 📍 \(a)") }
-                }
-            }
-            if !day.places.isEmpty {
-                md.append("")
-                md.append("**" + String(localized: "Places") + "**")
-                md.append("")
-                for p in day.places {
-                    md.append("- **\(p.name)** · " + p.details.joined(separator: " · "))
-                    if let a = p.address { md.append("  - 📍 \(a)") }
-                    if let n = p.notes { md.append("  - 💡 " + n.replacingOccurrences(of: "\n", with: " ")) }
-                }
-            }
-        }
-        md.append("")
-        md.append("---")
-        md.append("*" + String(localized: "Shared from TravelTips") + "*")
-        return md.joined(separator: "\n") + "\n"
-    }
-
-    private static func mdCell(_ s: String) -> String {
-        s.replacingOccurrences(of: "|", with: "\\|").replacingOccurrences(of: "\n", with: "<br>")
     }
 
     // MARK: HTML (for PDF)
@@ -394,24 +325,6 @@ struct TripPDFFile: Transferable {
             let data = await TripExport.pdf(html: item.html, footer: item.footer)
             let url = FileManager.default.temporaryDirectory.appending(path: item.fileName)
             try data.write(to: url, options: .atomic)
-            return SentTransferredFile(url)
-        }
-    }
-}
-
-struct TripMarkdownFile: Transferable {
-    let markdown: String
-    let fileName: String
-
-    init(trip: Trip) {
-        markdown = TripExport.markdown(TripExport.document(for: trip))
-        fileName = TripExport.fileName(for: trip, ext: "md")
-    }
-
-    static var transferRepresentation: some TransferRepresentation {
-        FileRepresentation(exportedContentType: UTType(filenameExtension: "md", conformingTo: .plainText) ?? .plainText) { item in
-            let url = FileManager.default.temporaryDirectory.appending(path: item.fileName)
-            try item.markdown.write(to: url, atomically: true, encoding: .utf8)
             return SentTransferredFile(url)
         }
     }

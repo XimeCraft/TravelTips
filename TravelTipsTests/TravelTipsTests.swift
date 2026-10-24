@@ -371,21 +371,8 @@ struct TripExportTests {
         #expect(doc.days[0].places.first?.details.contains("Ticket €36") == true)
         #expect(doc.days[2].timeline.isEmpty)
 
-        let md = TripExport.markdown(doc)
-        #expect(!md.contains("E12345678") && !md.contains("Passport"))
-    }
-
-    @Test func markdownStructure() throws {
-        let md = TripExport.markdown(TripExport.document(for: makeSpain(try makeContext())))
-        #expect(md.hasPrefix("# 🇪🇸 Spain\n"))
-        #expect(md.contains("## Itinerary at a Glance"))
-        #expect(md.contains("| Day | Date | City | Plan |"))
-        #expect(md.contains("Gaudí \\| day"))                 // pipes escaped inside tables
-        #expect(md.contains("## Transport") && md.contains("## Hotels"))
-        #expect(md.contains("- **08:05** Geneva → Barcelona"))
-        #expect(md.contains("  - 📍 C/ de Mallorca 401"))
-        #expect(md.contains("- [x] Check-in · Hotel <Arts>"))
-        #expect(md.contains("- **Sagrada Família** · 🏛️ Attraction · 14:30-16:00 · Ticket €36"))
+        let html = TripExport.html(doc)
+        #expect(!html.contains("E12345678") && !html.contains("Passport"))
     }
 
     @Test func htmlEscapesAndPdfRenders() throws {
@@ -400,13 +387,11 @@ struct TripExportTests {
         #expect(String(decoding: pdf.prefix(5), as: UTF8.self) == "%PDF-")
         if let out = ProcessInfo.processInfo.environment["TRAVELTIPS_EXPORT_DIR"] {
             try pdf.write(to: URL(fileURLWithPath: out).appending(path: "sample.pdf"))
-            try TripExport.markdown(TripExport.document(for: trip)).write(
-                to: URL(fileURLWithPath: out).appending(path: "sample.md"), atomically: true, encoding: .utf8)
         }
     }
 
-    /// Exports every trip from a copy of a real store (TRAVELTIPS_EXPORT_STORE = folder
-    /// with default.store*) into TRAVELTIPS_EXPORT_DIR. Skipped unless both are set.
+    /// Exports every trip as PDF from a copy of a real store (TRAVELTIPS_EXPORT_STORE =
+    /// folder with default.store*) into TRAVELTIPS_EXPORT_DIR. Skipped unless both are set.
     @Test(.enabled(if: ProcessInfo.processInfo.environment["TRAVELTIPS_EXPORT_STORE"] != nil
                    && ProcessInfo.processInfo.environment["TRAVELTIPS_EXPORT_DIR"] != nil))
     func exportRealStore() throws {
@@ -425,8 +410,6 @@ struct TripExportTests {
             let doc = TripExport.document(for: trip)
             try TripExport.pdf(html: TripExport.html(doc), footer: trip.name)
                 .write(to: out.appending(path: TripExport.fileName(for: trip, ext: "pdf")))
-            try TripExport.markdown(doc).write(to: out.appending(path: TripExport.fileName(for: trip, ext: "md")),
-                                               atomically: true, encoding: .utf8)
         }
     }
 

@@ -1864,26 +1864,6 @@
         }
       }
     },
-    "Share as Markdown": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "分享为 Markdown"
-          }
-        }
-      }
-    },
-    "Share as PDF": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "分享为 PDF"
-          }
-        }
-      }
-    },
     "Share itinerary": {
       "localizations": {
         "zh-Hans": {
