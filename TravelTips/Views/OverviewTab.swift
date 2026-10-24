@@ -7,6 +7,7 @@ struct OverviewTab: View {
     @State private var showEdit = false
 
     var body: some View {
+        ScrollViewReader { proxy in
         ScrollView {
             LazyVStack(spacing: 0) {
                 // Header
@@ -45,12 +46,25 @@ struct OverviewTab: View {
                 SectionHeader(title: "Daily Overview")
 
                 let days = trip.sortedDays
+                let todayIndex = trip.todayIndex()
                 ForEach(Array(days.enumerated()), id: \.element.id) { i, day in
-                    DayCard(day: day, dayNumber: i + 1, onTap: { onDay(i) })
+                    DayCard(day: day, dayNumber: i + 1, isToday: i == todayIndex,
+                            accent: trip.color, onTap: { onDay(i) })
+                        .id(day.id)
                 }
 
                 Spacer(minLength: 20)
             }
+        }
+        .task(id: trip.id) {
+            // Trip in progress: open on today's card. LazyVStack needs a layout
+            // pass before the target row exists, hence the short wait.
+            guard let i = trip.todayIndex(), i > 0 else { return }
+            try? await Task.sleep(for: .milliseconds(150))
+            withAnimation(.easeInOut(duration: 0.3)) {
+                proxy.scrollTo(trip.sortedDays[i].id, anchor: .top)
+            }
+        }
         }
         .sheet(isPresented: $showEdit) {
             TripFormSheet(editing: trip)
@@ -62,18 +76,20 @@ struct OverviewTab: View {
 private struct DayCard: View {
     let day: TripDay
     let dayNumber: Int
+    var isToday: Bool = false
+    var accent: Color = Theme.primary
     let onTap: () -> Void
 
     var body: some View {
-        CardView(action: onTap) {
+        CardView(action: onTap, highlight: isToday ? accent : nil) {
             HStack(alignment: .top, spacing: 12) {
                 // Day badge
                 ZStack {
                     RoundedRectangle(cornerRadius: 12)
-                        .fill(Theme.primaryMuted)
+                        .fill(isToday ? accent : Theme.primaryMuted)
                     Text("D\(dayNumber)")
                         .font(.system(size: 15, weight: .heavy))
-                        .foregroundColor(Theme.primary)
+                        .foregroundColor(isToday ? .white : Theme.primary)
                 }
                 .frame(width: 44, height: 44)
                 .flexibleFrame(maxWidth: 44)
@@ -83,6 +99,16 @@ private struct DayCard: View {
                         Text(fmtDate(day.date))
                             .font(.system(size: 12, weight: .semibold))
                             .foregroundColor(Theme.textSec)
+                        if isToday {
+                            Text("TODAY")
+                                .font(.system(size: 10, weight: .heavy))
+                                .kerning(0.6)
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(accent)
+                                .cornerRadius(6)
+                        }
                         Spacer()
                         Text(day.city)
                             .font(.system(size: 11, weight: .semibold))
@@ -138,5 +164,15 @@ private struct DayCard: View {
 extension View {
     func flexibleFrame(maxWidth: CGFloat) -> some View {
         self.frame(minWidth: maxWidth, maxWidth: maxWidth)
+    }
+}
+
+// MARK: - Today
+
+extension Trip {
+    /// Index into `sortedDays` of the day that is today, or nil if the trip
+    /// isn't in progress (or today's day is missing).
+    func todayIndex(now: Date = .now, calendar: Calendar = .current) -> Int? {
+        sortedDays.firstIndex { calendar.isDate($0.date, inSameDayAs: now) }
     }
 }

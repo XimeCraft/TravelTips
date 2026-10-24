@@ -34,10 +34,13 @@ struct CheckboxView: View {
 
 struct CardView<Content: View>: View {
     let action: (() -> Void)?
+    /// Draws a colored border around the card when set.
+    var highlight: Color? = nil
     @ViewBuilder let content: Content
 
-    init(action: (() -> Void)? = nil, @ViewBuilder content: () -> Content) {
+    init(action: (() -> Void)? = nil, highlight: Color? = nil, @ViewBuilder content: () -> Content) {
         self.action = action
+        self.highlight = highlight
         self.content = content()
     }
 
@@ -58,6 +61,10 @@ struct CardView<Content: View>: View {
             .padding(16)
             .background(Theme.card)
             .cornerRadius(16)
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(highlight ?? .clear, lineWidth: 2)
+            )
             .shadow(color: .black.opacity(0.04), radius: 4, x: 0, y: 1)
             .padding(.horizontal, 20)
             .padding(.bottom, 10)

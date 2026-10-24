@@ -235,3 +235,31 @@ struct TripDatesTests {
         #expect(days[1].transports.count == 1)                            // flight kept
     }
 }
+
+@MainActor
+struct TodayIndexTests {
+    let cal = Calendar.current
+    func d(_ day: Int) -> Date { cal.date(from: DateComponents(year: 2026, month: 10, day: day, hour: 15))! }
+
+    func trip(_ ctx: ModelContext) -> Trip {
+        let t = Trip(name: "T", emoji: "✈️", startDate: d(20), endDate: d(23))
+        ctx.insert(t)
+        for (i, date) in TripDates.dayStarts(from: d(20), to: d(23)).enumerated() {
+            t.days.append(TripDay(date: date, city: "", summary: "", sortOrder: i))
+        }
+        return t
+    }
+
+    @Test func findsTodayInsideTrip() throws {
+        let t = trip(try makeContext())
+        #expect(t.todayIndex(now: d(20)) == 0)
+        #expect(t.todayIndex(now: d(22)) == 2)
+        #expect(t.todayIndex(now: d(23)) == 3)
+    }
+
+    @Test func nilOutsideTrip() throws {
+        let t = trip(try makeContext())
+        #expect(t.todayIndex(now: d(19)) == nil)
+        #expect(t.todayIndex(now: d(24)) == nil)
+    }
+}
