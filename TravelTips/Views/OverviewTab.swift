@@ -4,14 +4,26 @@ struct OverviewTab: View {
     let trip: Trip
     let onDay: (Int) -> Void
 
+    @State private var showEdit = false
+
     var body: some View {
         ScrollView {
             LazyVStack(spacing: 0) {
                 // Header
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("\(trip.emoji) \(trip.name)")
-                        .font(.system(size: 26, weight: .heavy))
-                        .foregroundColor(Theme.textPrimary)
+                    HStack(alignment: .firstTextBaseline) {
+                        Text("\(trip.emoji) \(trip.name)")
+                            .font(.system(size: 26, weight: .heavy))
+                            .foregroundColor(Theme.textPrimary)
+                        Spacer()
+                        Button { showEdit = true } label: {
+                            Image(systemName: "pencil.circle.fill")
+                                .font(.system(size: 26))
+                                .foregroundColor(trip.color)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Edit trip")
+                    }
                     HStack(spacing: 6) {
                         Text("\(fmtDate(trip.startDate)) – \(fmtDate(trip.endDate))")
                             .font(.system(size: 13))
@@ -39,6 +51,10 @@ struct OverviewTab: View {
 
                 Spacer(minLength: 20)
             }
+        }
+        .sheet(isPresented: $showEdit) {
+            TripFormSheet(editing: trip)
+                .presentationDetents([.medium, .large])
         }
     }
 }

@@ -91,8 +91,8 @@ struct TripsListView: View {
                 .padding(.trailing, 20)
         }
         .sheet(isPresented: $showAddSheet) {
-            NewTripSheet()
-                .presentationDetents([.medium])
+            TripFormSheet()
+                .presentationDetents([.medium, .large])
         }
         .confirmationDialog(
             "Delete this trip?",
@@ -125,7 +125,7 @@ private struct TripCard: View {
                     RoundedRectangle(cornerRadius: 14)
                         .fill(
                             LinearGradient(
-                                colors: [Theme.primary, Theme.primaryLight],
+                                colors: [trip.color, trip.color.opacity(0.75)],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             )
@@ -173,121 +173,6 @@ private struct TripCard: View {
                             .font(.system(size: 10, weight: .medium))
                             .foregroundColor(Theme.textTer)
                     }
-                }
-            }
-        }
-    }
-}
-
-// MARK: - New Trip Sheet
-
-private struct NewTripSheet: View {
-    @Environment(\.dismiss) private var dismiss
-    @Environment(\.modelContext) private var modelContext
-
-    @State private var name = ""
-    @State private var emoji = ""
-    @State private var startDate = Date()
-    @State private var endDate = Date().addingTimeInterval(86400 * 7)
-
-    private let quickEmojis = ["🇨🇳","🇳🇿","🇸🇬","🇯🇵","🇰🇷","🇺🇸","🇬🇧","🇫🇷","🇩🇪","🇮🇹",
-                               "🇪🇸","🇹🇭","🇦🇪","🇪🇬","🇲🇦","🇹🇷","🇬🇷","🇵🇹","🇦🇺","✈️","🏖️","🏔️","🗺️","🧳"]
-
-    var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(spacing: 0) {
-                    SheetField(label: "Trip Name", text: $name, placeholder: "e.g. Egypt")
-
-                    // Emoji field with quick-select row
-                    VStack(alignment: .leading, spacing: 5) {
-                        Text("Emoji")
-                            .font(.system(size: 11, weight: .bold))
-                            .foregroundColor(Theme.textSec)
-                            .textCase(.uppercase)
-                            .kerning(0.8)
-                        TextField("🌍", text: $emoji)
-                            .font(.system(size: 22))
-                            .padding(10)
-                            .background(Color(.systemGray6))
-                            .cornerRadius(10)
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 8) {
-                                ForEach(quickEmojis, id: \.self) { flag in
-                                    Button {
-                                        emoji = flag
-                                    } label: {
-                                        Text(flag)
-                                            .font(.system(size: 24))
-                                            .padding(6)
-                                            .background(Color(.systemGray6))
-                                            .cornerRadius(8)
-                                    }
-                                    .buttonStyle(.plain)
-                                }
-                            }
-                            .padding(.vertical, 4)
-                        }
-                    }
-                    .padding(.bottom, 4)
-
-                    VStack(alignment: .leading, spacing: 5) {
-                        Text("Start Date")
-                            .font(.system(size: 11, weight: .bold))
-                            .foregroundColor(Theme.textSec)
-                            .textCase(.uppercase)
-                            .kerning(0.8)
-                        DatePicker("", selection: $startDate, displayedComponents: .date)
-                            .labelsHidden()
-                            .datePickerStyle(.compact)
-                            .tint(Theme.primary)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.bottom, 4)
-
-                    VStack(alignment: .leading, spacing: 5) {
-                        Text("End Date")
-                            .font(.system(size: 11, weight: .bold))
-                            .foregroundColor(Theme.textSec)
-                            .textCase(.uppercase)
-                            .kerning(0.8)
-                        DatePicker("", selection: $endDate, in: startDate..., displayedComponents: .date)
-                            .labelsHidden()
-                            .datePickerStyle(.compact)
-                            .tint(Theme.primary)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.bottom, 4)
-
-                    SheetSaveButton(label: "Create Trip") {
-                        guard !name.isEmpty else { return }
-                        let trip = Trip(
-                            name: name,
-                            emoji: emoji.isEmpty ? "✈️" : emoji,
-                            startDate: startDate,
-                            endDate: endDate
-                        )
-                        let calendar = Calendar.current
-                        var current = startDate
-                        var sortOrder = 0
-                        while current <= endDate {
-                            let day = TripDay(date: current, city: "", summary: "", sortOrder: sortOrder)
-                            trip.days.append(day)
-                            current = calendar.date(byAdding: .day, value: 1, to: current) ?? endDate.addingTimeInterval(86400)
-                            sortOrder += 1
-                        }
-                        modelContext.insert(trip)
-                        dismiss()
-                    }
-                }
-                .padding(20)
-            }
-            .navigationTitle("New Trip")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                        .foregroundColor(Theme.primary)
                 }
             }
         }
